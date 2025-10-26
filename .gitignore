@@ -1,0 +1,66 @@
+# ===================================================================
+# File .gitignore per il Progetto Ruggine (Rust + React)
+# ===================================================================
+
+# ---------------------------------
+# Backend RUST (ruggine_server)
+# ---------------------------------
+
+# La cartella 'target' contiene tutti i file compilati,
+# gli eseguibili e le dipendenze. È la più importante da ignorare.
+/ruggine_server/target/
+
+# Il file del database SQLite. Non vogliamo committare i dati.
+/ruggine_server/ruggine.db
+/ruggine_server/ruggine.db-journal
+/ruggine_server/ruggine.db-wal
+
+# [cite_start]I file di log che genereremo per le prestazioni della CPU [cite: 8]
+/ruggine_server/*.log
+
+# ---------------------------------
+# Frontend REACT (ruggine_client)
+# ---------------------------------
+
+# La cartella 'node_modules' contiene migliaia di dipendenze
+# e non va *mai* committata.
+/ruggine_client/node_modules/
+
+# I file di build di produzione (generati da Vite)
+/ruggine_client/dist/
+
+# Cache interna di Vite
+/ruggine_client/.vite/
+
+# File di log e cache di npm/yarn
+/ruggine_client/.npm/
+/ruggine_client/npm-debug.log*
+/ruggine_client/yarn-debug.log*
+/ruggine_client/yarn-error.log*
+/ruggine_client/pnpm-debug.log*
+
+# ---------------------------------
+# File di Sistema e IDE
+# ---------------------------------
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# IDE (JetBrains, VSCode, etc.)
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ---------------------------------
+# File di Ambiente
+# ---------------------------------
+
+# File che contengono "segreti" come password o chiavi API
+# (Anche se non li usiamo ancora, è buona norma)
+.env
+.env.*
+!.env.example
