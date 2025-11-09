@@ -1,90 +1,142 @@
-# Progetto Ruggine - Chat App
+## Progetto Ruggine - Chat App
 
-Questo progetto è l'implementazione della traccia **"Ruggine: App di Chat Testuale"**.  
-L'architettura scelta prevede un **backend in Rust** (con [Axum](https://docs.rs/axum/latest/axum/) / [Tokio](https://tokio.rs/)) e un **frontend in React** (come Web App).
+Questo progetto è l'implementazione della traccia "Ruggine: App di Chat Testuale".
+L'architettura scelta prevede un backend in Rust (con Axum / Tokio) e un frontend in React (come Web App).
 
 ---
 
-## 🧩 Stato Attuale del Progetto
+## 🚀 Stato Attuale del Progetto
 
-Attualmente, il progetto è uno **scheletro funzionante**.  
-Abbiamo:
-- un sistema di **autenticazione HTTP**
-- una **chat in tempo reale via WebSocket**, che funziona come una singola “stanza” globale.
+L'applicazione ha superato la fase di "scheletro" ed è ora un'applicazione di chat funzionale basata su gruppi, con un backend robusto e un'architettura multi-modulo.
 
 ---
 
 ## ⚙️ Backend (Server Rust)
 
-Il server è in grado di:
+Il server è stato profondamente ristrutturato per scalabilità e manutenibilità.
 
-### 🔐 Gestire Utenti
-- Si connette a un database **SQLite** (`ruggine.db`).
-- **Registrazione** → `POST /register`: registra nuovi utenti con password sicure (hashing via **argon2**).
-- **Login** → `POST /login`: autentica gli utenti esistenti.
+1. Architettura
+- Multi-Modulo: Il codice non è più in un singolo main.rs. È stato diviso in un'architettura a moduli:
+    - src/routes/ (i "Controllers" che gestiscono le richieste HTTP e WS)
+    - src/services/ (la logica di business, es. hashing password)
+    - src/models.rs (definizioni JSON per la comunicazione Client/Server)
+    - src/state.rs (definizione dello stato condiviso dell'app)
+    - src/error.rs (gestione centralizzata degli errori)
 
-### 💬 Gestione WebSocket
-- **Endpoint:** `GET /ws`
-- Accetta connessioni WebSocket.
-- Effettua un **broadcast globale**: qualsiasi messaggio ricevuto su qualsiasi WebSocket viene inoltrato a **tutti i client connessi** in quel momento (“effetto pappagallo”).
+2. Database (SQLite)
+- Migrazioni Automatiche: Il server esegue automaticamente le migrazioni del database (sqlx::migrate!) all'avvio, creando il DB e le tabelle se non esistono.
+- Schemi: Oltre alla tabella `users`, il DB ora include:
+    - `groups`: Memorizza tutte le "stanze" (sia gruppi che DM).
+    - `group_members`: Tabella ponte che collega utenti e gruppi.
+    - `messages`: Salva la cronologia di tutti i messaggi inviati.
+
+3. Autenticazione e Sicurezza
+- Registrazione: POST /register
+    - Validazione Server-Side: Rifiuta registrazioni con username o password vuoti o troppo corti.
+- Login: POST /login
+    - Sicuro: Non restituisce più HTTP 200 per login falliti. Invia un HTTP 400 con un messaggio generico ("Invalid username or password.") per prevenire la User Enumeration.
+
+4. Gestione WebSocket (GET /ws)
+   Questo è il cuore del backend ed è stato completamente riscritto.
+
+- Protocollo JSON: La comunicazione è passata da semplici stringhe a un protocollo JSON strutturato (ClientMessage e ServerMessage).
+- Identificazione: Non c'è più un broadcast "pappagallo". Al contrario:
+    1. Il client deve inviare un messaggio {"type": "auth", "token": "..."} come prima cosa.
+    2. Il server valida il token e associa il socket a un user_id.
+- Supporto Multi-Connessione:
+    - Risolto il bug critico della "race condition".
+    - Lo stato (AppState) ora usa una mappa nidificata: HashMap<UserID, HashMap<SocketID, Sender>>.
+    - Ogni connessione riceve un Uuid unico, permettendo a un singolo utente (es. `gio`) di essere connesso da più browser o dispositivi contemporaneamente.
+    - Il cleanup alla disconnessione rimuove solo il SocketID specifico, lasciando intatte le altre connessioni dell'utente.
+- Logica Gruppi & DM:
+    - Il server adotta un'architettura unificata: un Messaggio Diretto (DM) è semplicemente un gruppo con `is_dm: true` e 2 membri.
+    - ClientMessage::CreateDM: Crea un nuovo gruppo DM e aggiunge entrambi i membri.
+    - ClientMessage::CreateGroup: Crea un gruppo standard, aggiungendo il creatore come primo membro.
+    - ClientMessage::InviteToGroup: Aggiunge un nuovo utente a un gruppo esistente (e notifica tutti i membri).
+- Logica Messaggi:
+    - ClientMessage::SendGroupMessage:
+        1. Il server riceve il messaggio.
+        2. Lo salva nel database (nella tabella `messages`).
+        3. Identifica tutti i membri di quel `group_id`.
+        4. Invia il messaggio *solo* ai socket attivi (online) di quei membri.
 
 ---
 
 ## 🖥️ Frontend (Client React)
 
-Il client è una **Single Page Application (SPA)** che:
+L'interfaccia utente è stata completamente ridisegnata per gestire la logica dei gruppi.
 
-### 🧭 Gestisce le Rotte
-Utilizza **react-router-dom** per due pagine principali:
-- `/` → Pagina di **Login/Registrazione**
-- `/chat` → Pagina della **Chat**
+1. UI (Layout Multi-Colonna)
+- La ChatPage non è più una singola chat, ma un layout in stile Slack/WhatsApp:
+    - Colonna Sinistra:
+        - Un'area per creare nuovi Gruppi o DM.
+        - Un elenco dinamico di tutti i gruppi e DM dell'utente.
+        - Un'area utente con il nome e un pulsante di Logout.
+    - Colonna Destra:
+        - Un'area per invitare utenti al gruppo attualmente selezionato (nascosta per i DM).
+        - La finestra della chat che mostra i messaggi.
+        - L'area di input del messaggio.
 
-### 🔑 Autenticazione
-- Permette agli utenti di registrarsi e accedere tramite gli endpoint HTTP del server.
-- Salva l’**username** nel `localStorage` dopo il login per ricordarsi dell’utente.
+2. Gestione dello Stato e del Protocollo
+- Stato: Il client gestisce uno stato centrale che include `groups: []` (l'elenco di tutti i gruppi) e `activeGroupId: null` (la chat attualmente selezionata).
+- Flusso di Connessione:
+    1. Al login (in LoginPage), salva *sia* `username` che `token` nel `localStorage`.
+    2. In ChatPage, invia il messaggio {"type": "auth", "token": ...}.
+    3. Riceve un messaggio {"type": "update_group_list", ...} dal server e popola la colonna di sinistra.
+- Invio Messaggi: Invia messaggi JSON strutturati (es. `create_dm`, `send_group_message`, `invite_to_group`).
+- Gestione Errori:
+    - Risolto il bug del "loop di login": un alert per un token non valido ora pulisce il `localStorage` e reindirizza correttamente a `/`.
+    - Gli errori di login/registrazione vengono mostrati sotto il modulo nella LoginPage.
 
-### 🚧 Route Protection
-- Se un utente tenta di accedere a `/chat` senza essere loggato, viene **reindirizzato** automaticamente alla pagina di login.
+3. Correzioni UI/UX
+- Risolto il bug di allineamento del pulsante "Invia" (ora usa Flexbox).
+- Implementato un pulsante di Logout funzionante.
 
-### ⚡ Chat in Tempo Reale
-- Si connette al server via **WebSocket**.
-- Invia messaggi formattati come `username: messaggio`.
-- Riceve i messaggi inoltrati dal server e li mostra in tempo reale.
+---
+
+## 🗺️ Evoluzione del Progetto (La Nostra Storia)
+
+1. Fase 1: Scheletro (Il Vecchio README)
+    - Autenticazione HTTP (insicura) e un singolo main.rs.
+    - Un WebSocket "pappagallo" che inoltrava stringhe a tutti.
+
+2. Fase 2: Architettura e Refactoring
+    - Spostamento da un singolo file a un'architettura multi-modulo (routes, services, models, ecc.).
+    - Implementazione della migrazione automatica del DB all'avvio.
+
+3. Fase 3: Identificazione e JSON
+    - Abbandono delle stringhe per un protocollo JSON completo (ClientMessage/ServerMessage).
+    - Implementazione del flusso di autenticazione WebSocket {"type": "auth"}.
+
+4. Fase 4: Multi-Connessione (Risoluzione Bug)
+    - Risolto il bug critico della "race condition" (un utente che si riconnetteva "cancellava" la propria connessione).
+    - Evoluzione dello AppState per usare Uuid e la mappa nidificata HashMap<UserID, HashMap<SocketID, Sender>>.
+
+5. Fase 5: Logica Gruppi & DM
+    - Aggiunte le tabelle `groups`, `group_members`, `messages` al DB.
+    - Implementata la logica "DM è un gruppo" nel backend.
+    - Sostituito il broadcast globale con un inoltro mirato ai membri del gruppo.
+    - Implementata la logica per creare gruppi, DM e invitare utenti.
+    - Rifacimento completo della UI del frontend per supportare i gruppi.
+
+6. Fase 6: Sicurezza e Stabilità
+    - Corretto il bug catastrofico del login (restituiva sempre HTTP 200).
+    - Aggiunta la validazione server-side per la registrazione.
+    - Corretti i bug di reindirizzamento e UI nel frontend.
+    - Aggiunto il Logout.
 
 ---
 
 ## 🚧 Cosa Manca (Prossimi Passi)
 
-Il sistema attuale presenta una **lacuna fondamentale**:  
-👉 **l’identificazione sugli WebSocket.**
+1. Cronologia Messaggi (Requisito Chiave)
+    - Backend: Modificare ClientMessage::Auth per far sì che, dopo l'autenticazione, il server esegua una query al DB e invii la cronologia dei messaggi (es. ultimi 50) per i gruppi dell'utente.
+    - Frontend: Gestire questo nuovo ServerMessage::ChatHistory e usarlo per popolare lo stato `messages` al caricamento, risolvendo il problema della chat vuota al refresh.
 
-### ❗ Il Problema
-Il server sa autenticare un utente via HTTP, ma quando lo stesso utente apre una connessione WebSocket,  
-**non sa chi sia** — vede solo una nuova connessione anonima.
+2. Miglioramenti UI/UX
+    - Invio con "Invio": Aggiungere un onKeyPress all'input dei messaggi per inviare con il tasto Invio.
+    - Barra Info Gruppo: Aggiungere una barra in cima alla finestra della chat (colonna destra) che mostri "Parlando con: Ale" (per i DM) o "Gruppo: Test Inviti (gio, ale, fra)" (per i gruppi).
 
-### 🎯 L’Obiettivo
-Insegnare al server a **collegare una connessione WebSocket a un ID utente**.
-
----
-
-## 🗺️ Piano d’Azione
-
-### 1. Frontend
-- Dopo il login (in `LoginPage`), salvare nel `localStorage` **non solo l’username**, ma anche un **token** (per ora può essere l’username stesso, in futuro un JWT).
-- Quando il client (`ChatPage.jsx`) apre la connessione WebSocket, il **primo messaggio** inviato al server deve essere un messaggio di **autenticazione**, ad esempio:
-
-```json
-{ "type": "auth", "token": "mario" }
-```
-
-### 2. Backend
-
-Quando il server riceve il primo messaggio su una nuova connessione WebSocket:
-
-- Legge il JSON ricevuto.
-- Verifica il token.
-- Salva l’associazione, ad esempio in una HashMap<UserId, WebSocketSender>.
-
-Una volta fatto questo, potremo abbandonare il broadcast globale.
-Quando il server riceve un messaggio da mario, 
-saprà chi è e potrà decidere a chi inviarlo (es. solo ai membri di un gruppo specifico).
+3. Requisiti Finali del Progetto
+    - Logging CPU: Aggiungere `sysinfo` al backend e avviare un task che registri l'uso della CPU ogni 2 minuti in un file di log.
+    - Dimensione Eseguibile: Compilare il server in modalità `release` (cargo build --release) e annotare la dimensione finale dell'eseguibile in questo README.
