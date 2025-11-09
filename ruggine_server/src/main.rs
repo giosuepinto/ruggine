@@ -13,11 +13,12 @@ use axum::{
 };
 use futures_util::{sink::SinkExt, stream::StreamExt};
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
+use sqlx::sqlite::{SqliteConnectOptions,SqlitePool, SqlitePoolOptions};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use std::str::FromStr;
 
 // Importiamo l'algoritmo
 use argon2::Argon2;
@@ -51,7 +52,7 @@ struct AppState {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> { // Modifica: ora restituisce un Result
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -60,18 +61,34 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    // --- Connessione al Database ---
+    // --- Connessione al Database (NUOVA VERSIONE) ---
+
+    // 1. Definiamo le opzioni di connessione, inclusa la creazione del file
+    let db_options = SqliteConnectOptions::from_str("sqlite:ruggine.db")?
+        .create_if_missing(true);
+
+    // 2. Creiamo il "pool" di connessioni usando quelle opzioni
     let db_pool = SqlitePoolOptions::new()
         .max_connections(5)
-        .connect("sqlite:ruggine.db")
-        .await
-        .expect("Impossibile connettersi al DB");
+        .connect_with(db_options)
+        .await?; // Modifica: da .expect() a '?'
 
     tracing::debug!("Database connesso.");
 
+    // --- ESECUZIONE AUTOMATICA MIGRAZIONI ---
+    // Questa è la magia! Cerca la cartella 'migrations'
+    // e applica tutte le migrazioni necessarie.
+    // È sicuro da eseguire ogni volta.
+    sqlx::migrate!("./migrations")
+        .run(&db_pool)
+        .await?;
+
+    tracing::debug!("Migrazioni del database verificate e applicate.");
+    // --- Fine Sezione Migrazioni ---
+
+
     let (tx, _rx) = broadcast::channel(100);
 
-    // --- Aggiorna AppState ---
     let app_state = Arc::new(AppState { tx, db: db_pool });
 
     let cors = CorsLayer::new()
@@ -79,7 +96,6 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    // --- Aggiorna il Router ---
     let app = Router::new()
         .route("/ws", get(ws_handler))
         .route("/register", post(register_handler))
@@ -88,11 +104,14 @@ async fn main() {
         .layer(cors);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
+        .await?; // Modifica: da .unwrap() a '?'
+
     tracing::debug!(">> Server in ascolto su {}", listener.local_addr().unwrap());
 
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .await?; // Modifica: da .unwrap() a '?'
+
+    Ok(()) // Modifica: Aggiunto Ok(()) alla fine
 }
 
 // --- Nuovo Handler: Registrazione ---
