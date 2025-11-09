@@ -11,6 +11,7 @@ use sqlx; // Per sqlx::Error
 pub enum AppError {
     SqlxError(sqlx::Error),
     HashError(password_hash::Error),
+    ValidationError(String),
 }
 
 // Rendi 'pub' l'implementazione
@@ -24,6 +25,11 @@ impl IntoResponse for AppError {
             AppError::HashError(e) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Errore Hashing: {}", e),
+            ),
+            // --- AGGIUNGI QUESTO CASO ---
+            AppError::ValidationError(msg) => (
+                StatusCode::BAD_REQUEST, // Codice 400
+                msg,
             ),
         };
         (status, Json(serde_json::json!({ "error": error_message }))).into_response()

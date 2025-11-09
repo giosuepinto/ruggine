@@ -24,11 +24,12 @@ function LoginPage() {
                 if (endpoint === 'login') {
                     // Login riuscito!
                     // Salviamo il nome utente (per ora) e andiamo alla chat
-                    localStorage.setItem('token', username); // Usiamo l'username come token
+                    localStorage.setItem('username', username); // Usiamo l'username come token
+                    localStorage.setItem('token', username);
                     navigate('/chat'); // Reindirizza alla pagina della chat
                 }
             } else {
-                setMessage(`Errore: ${data.error || data.message}`);
+                setMessage(data.error || data.message || "Errore Sconosciuto");
             }
         } catch (err) {
             setMessage(`Errore di connessione: ${err.message}`);
