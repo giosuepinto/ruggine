@@ -24,7 +24,7 @@ function LoginPage() {
                 if (endpoint === 'login') {
                     // Login riuscito!
                     // Salviamo il nome utente (per ora) e andiamo alla chat
-                    localStorage.setItem('username', username);
+                    localStorage.setItem('token', username); // Usiamo l'username come token
                     navigate('/chat'); // Reindirizza alla pagina della chat
                 }
             } else {

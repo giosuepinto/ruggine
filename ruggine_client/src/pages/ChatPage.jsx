@@ -25,8 +25,18 @@ function ChatPage() {
         socket.current.onopen = () => {
             console.log('Connesso al server WebSocket!');
             setIsConnected(true);
-            // *** STEP FUTURO: QUI DOVREMMO AUTENTICARE IL SOCKET ***
-            // Per ora, ci connettiamo e basta.
+
+            // === NUOVA LOGICA DI AUTENTICAZIONE ===
+            const token = localStorage.getItem('token');
+            if (token) {
+                socket.current.send(JSON.stringify({
+                    type: "auth",
+                    token: token
+                }));
+            } else {
+                console.error("Token non trovato, impossibile autenticarsi.");
+                navigate('/'); // Torna al login se non c'è il token
+            }
         };
 
         socket.current.onclose = () => {
@@ -35,7 +45,16 @@ function ChatPage() {
         };
 
         socket.current.onmessage = (event) => {
-            setMessages((prevMessages) => [...prevMessages, event.data]);
+            const message = JSON.parse(event.data);
+
+            if (message.type === "chat") {
+                // Formattiamo il messaggio per la visualizzazione
+                const formattedMessage = `${message.from}: ${message.content}`;
+                setMessages((prevMessages) => [...prevMessages, formattedMessage]);
+            } else if (message.type === "info") {
+                // Messaggio di info (es. "Utente X si è connesso")
+                setMessages((prevMessages) => [...prevMessages, `[INFO] ${message.content}`]);
+            }
         };
 
         return () => {
@@ -57,8 +76,11 @@ function ChatPage() {
             // Leggerà [object Object]. Lo sistemeremo DOPO.
             // Per ora, facciamo come prima MA usiamo il nome utente.
 
-            // Vecchio modo, ma con 'username' (funzionerà con l'ultimo main.rs)
-            socket.current.send(`${username}: ${input}`);
+            // === NUOVO MODO (JSON) ===
+            socket.current.send(JSON.stringify({
+                type: "chat",
+                content: input
+            }));
 
             setInput('');
         }

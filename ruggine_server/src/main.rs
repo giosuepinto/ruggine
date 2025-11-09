@@ -4,6 +4,7 @@ mod error;
 mod routes;
 mod services;
 mod state;
+mod models;
 
 // --- Importazioni Principali ---
 use crate::{
@@ -15,7 +16,8 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
-use tokio::sync::broadcast;
+use std::collections::HashMap;
+use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -44,8 +46,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::debug!("Database connesso e migrazioni applicate.");
 
     // --- Setup Stato Applicazione ---
-    let (tx, _rx) = broadcast::channel(100);
-    let app_state = Arc::new(AppState { tx, db: db_pool });
+    // Crea una nuova HashMap vuota, protetta da un RwLock e un Arc
+    let connections = Arc::new(RwLock::new(HashMap::new()));
+
+    // Crea il nuovo AppState
+    let app_state = Arc::new(AppState {
+        db: db_pool,
+        connections,
+    });
 
     // --- Setup CORS ---
     let cors = CorsLayer::new()
