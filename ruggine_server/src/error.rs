@@ -1,3 +1,4 @@
+use std::fmt;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -8,10 +9,24 @@ use serde_json; // Per il JSON nell'errore
 use sqlx; // Per sqlx::Error
 
 // Rendi 'pub' l'enum
+#[derive(Debug)]
 pub enum AppError {
     SqlxError(sqlx::Error),
     HashError(password_hash::Error),
     ValidationError(String),
+}
+
+// --- 3. AGGIUNGI L'IMPLEMENTAZIONE PER 'Display' (per {}) ---
+// Questo risolve il tuo errore di compilazione.
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let error_message = match self {
+            AppError::SqlxError(e) => format!("Errore DB: {}", e),
+            AppError::HashError(e) => format!("Errore Hashing: {}", e),
+            AppError::ValidationError(msg) => msg.to_string(), // Usa direttamente il messaggio
+        };
+        write!(f, "{}", error_message)
+    }
 }
 
 // Rendi 'pub' l'implementazione

@@ -7,7 +7,7 @@ use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid; // Importa Uuid
 
 // Importa i nostri modelli
-use crate::models::ServerMessage;
+use crate::DTOs::web_socket::ServerMessage;
 
 // NUOVO ALIAS:
 // Mappa: user_id -> (Mappa: socket_id -> Canale di invio)

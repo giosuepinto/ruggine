@@ -1,15 +1,21 @@
 // --- Dichiarazione Moduli ---
 // Questi dicono a Rust di cercare i file/cartelle
 mod error;
-mod routes;
 mod services;
 mod state;
-mod models;
+mod DTOs; // Ora punta alla cartella 'models'
+
+// === MODULI AGGIUNTI ===
+mod repositories;
+mod controllers;
+mod router;
+// === FINE AGGIUNTE ===
 
 // --- Importazioni Principali ---
 use crate::{
-    routes::create_router, // La nostra funzione che crea il router
-    state::AppState, // Il nostro stato
+    // La nostra funzione che crea il router, ora dal modulo 'router'
+    router::create_router,
+    state::AppState,       // Il nostro stato
 };
 
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -23,7 +29,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // --- Setup Logging ---
+    // --- Setup Logging (Invariato) ---
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -32,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    // --- Setup Database ---
+    // --- Setup Database (Invariato) ---
     let db_options = SqliteConnectOptions::from_str("sqlite:ruggine.db")?
         .create_if_missing(true);
 
@@ -45,28 +51,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::debug!("Database connesso e migrazioni applicate.");
 
-    // --- Setup Stato Applicazione ---
-    // Crea una nuova HashMap vuota, protetta da un RwLock e un Arc
+    // --- Setup Stato Applicazione (Invariato) ---
+    // (Presuppone che state.rs sia stato aggiornato come da nostra discussione)
     let connections = Arc::new(RwLock::new(HashMap::new()));
 
-    // Crea il nuovo AppState
     let app_state = Arc::new(AppState {
         db: db_pool,
         connections,
     });
 
-    // --- Setup CORS ---
+    // --- Setup CORS (Invariato) ---
     let cors = CorsLayer::new()
-        .allow_origin(Any) // Permetti qualsiasi origine
-        .allow_methods(Any) // Permetti qualsiasi metodo (GET, POST, etc.)
-        .allow_headers(Any); // Permetti qualsiasi header
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
 
-    // --- Creazione Router ---
-    let app = create_router() // Chiama la funzione dal modulo 'routes'
-        .with_state(app_state) // Applica lo stato
-        .layer(cors); // Applica il layer CORS
+    // --- Creazione Router (Invariato nella logica, usa il nuovo import) ---
+    let app = create_router() // Chiama la funzione dal modulo 'router'
+        .with_state(app_state)
+        .layer(cors);
 
-    // --- Avvio Server ---
+    // --- Avvio Server (Invariato) ---
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     let listener = tokio::net::TcpListener::bind(addr).await?;
 

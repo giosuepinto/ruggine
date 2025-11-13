@@ -71,12 +71,24 @@ function ChatPage() {
         // === GESTORE MESSAGGI (MODIFICATO) ===
         socket.current.onmessage = (event) => {
             const msg = JSON.parse(event.data);
+            const initialMessages = {};
 
             switch (msg.type) {
                 // Caso 1: Il server ci invia la nostra lista di gruppi
                 case 'update_group_list':
                     console.log("Ricevuta lista gruppi:", msg.groups);
                     setGroups(msg.groups);
+
+
+                    for (const group of msg.groups) {
+                        // 'group.messages' è l'array di cronologia dal server
+                        // Lo convertiamo nel formato che la UI usa
+                        initialMessages[group.group_id] = group.messages.map(chatMsg => ({
+                            from: chatMsg.from_username,
+                            content: chatMsg.content
+                        }));
+                    }
+                    setMessages(initialMessages);
                     break;
 
                 // Caso 2: Riceviamo un messaggio di chat
@@ -283,7 +295,7 @@ function ChatPage() {
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                         style={{ flex: 1, padding: '10px', marginRight: '10px' }} // flex: 1 si prende lo spazio
                         placeholder={activeGroupId ? "Scrivi un messaggio..." : "Seleziona una chat"}
                         disabled={!activeGroupId}
