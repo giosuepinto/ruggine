@@ -1,20 +1,24 @@
 // src/pages/LoginPage.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../App.css'; // Assicuriamoci di importare il CSS
+import '../App.css';
+import { useWebSocket } from '../context/WebSocketContext';
 
 function LoginPage() {
-    // Stato per switchare tra Login (true) e Registrazione (false)
-    const [isLoginMode, setIsLoginMode] = useState(true);
+    const { login } = useWebSocket(); // Usiamo la nuova funzione login
 
+    const [isLoginMode, setIsLoginMode] = useState(true);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
-    const [isError, setIsError] = useState(false); // Per colorare il messaggio
+    const [isError, setIsError] = useState(false);
+
+    // navigate non serve più direttamente qui se lo gestisce il context,
+    // ma possiamo tenerlo se vogliamo fare redirect manuale.
     const navigate = useNavigate();
 
     const handleApiCall = async (e) => {
-        e.preventDefault(); // Previene il refresh del form
+        e.preventDefault();
         setMessage('Caricamento...');
         setIsError(false);
 
@@ -31,17 +35,17 @@ function LoginPage() {
 
             if (response.ok) {
                 setMessage(data.message);
-                if (endpoint === 'login') {
-                    // Login riuscito!
-
-                    // 1. Salva l'username (per la UI)
-                    localStorage.setItem('username', username);
-
-                    // 2. Salva il TOKEN VERO (che il server ci manda nel messaggio)
-                    //    Nota: data.message ora contiene il JWT, non "Login riuscito"
-                    localStorage.setItem('token', data.message);
+                if (isLoginMode) {
+                    // === FIX QUI ===
+                    // Usiamo la funzione del context che aggiorna lo stato 'user'
+                    // data.message contiene il TOKEN JWT
+                    login(username, data.message);
 
                     navigate('/chat');
+                } else {
+                    setIsLoginMode(true);
+                    setPassword('');
+                    setMessage("Registrazione avvenuta! Ora puoi fare il login.");
                 }
             } else {
                 setIsError(true);

@@ -14,8 +14,6 @@ use crate::{
     error::AppError,
     // Importa il DTO per ricevere i dati dal controller
     DTOs::authentication::AuthPayload,
-    // Importa il repository per accedere al DB
-    repositories::user_repository,
 };
 
 use jsonwebtoken::{encode, Header, EncodingKey};
@@ -23,6 +21,8 @@ use serde::{Deserialize, Serialize};
 use chrono::{Utc, Duration};
 use std::env;
 use crate::DTOs::authentication::Claims;
+use crate::repositories::{user_repository, group_repository};
+
 // === FINE NUOVI IMPORT ===
 
 
@@ -61,6 +61,13 @@ pub async fn register_user(
 
     //    Se non esiste, lo creiamo
     user_repository::create_user(db, &payload.username, &password_hash).await?;
+
+    // Recupera l'utente appena creato per avere l'ID
+    let new_user = user_repository::find_by_username(db, &payload.username).await?.unwrap();
+
+    // AGGIUNGI AL GRUPPO GLOBALE (ID 1)
+    // Usiamo add_member_or_ignore del group_repository
+    group_repository::add_member_or_ignore(db, 1, new_user.id).await?;
 
     Ok(())
 }
