@@ -5,6 +5,10 @@ use crate::{
     repositories::user_repository,
 };
 
+use jsonwebtoken::{decode, DecodingKey, Validation};
+use serde::{Deserialize, Serialize};
+use crate::DTOs::authentication::Claims;
+
 /// Struct "Sessione" per un utente connesso via WebSocket.
 /// Omette la password_hash.
 #[derive(Debug, Clone)]
@@ -16,18 +20,21 @@ pub struct WsUser {
 /// Autentica un utente tramite il suo token (username)
 /// e restituisce i suoi dati di sessione.
 pub async fn authenticate_ws_user(
-    db: &SqlitePool,
-    token: &str // Il token è l'username
+    _db: &SqlitePool, // Non ci serve più il DB per validare il token!
+    token: &str
 ) -> Result<WsUser, AppError> {
 
-    let user_entity = user_repository::find_by_username(db, token)
-        .await?
-        // Errore se il token/username non esiste
-        .ok_or_else(|| AppError::ValidationError("Token non valido.".to_string()))?;
+    let secret = "segreto_super_segreto_da_non_mettere_nel_codice"; // Stessa chiave di sopra
 
-    // Converte l'Entità del DB in un DTO sicuro per la sessione
+    let token_data = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(secret.as_bytes()),
+        &Validation::default(),
+    ).map_err(|_| AppError::ValidationError("Token JWT non valido o scaduto.".to_string()))?;
+
+    // Il token è valido! Estraiamo i dati.
     Ok(WsUser {
-        id: user_entity.id,
-        username: user_entity.username,
+        id: token_data.claims.user_id,
+        username: token_data.claims.sub,
     })
 }

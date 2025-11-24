@@ -17,6 +17,12 @@ use crate::{
     // Importa il repository per accedere al DB
     repositories::user_repository,
 };
+
+use jsonwebtoken::{encode, Header, EncodingKey};
+use serde::{Deserialize, Serialize};
+use chrono::{Utc, Duration};
+use std::env;
+use crate::DTOs::authentication::Claims;
 // === FINE NUOVI IMPORT ===
 
 
@@ -63,27 +69,46 @@ pub async fn register_user(
 pub async fn login_user(
     db: &SqlitePool,
     payload: AuthPayload
-) -> Result<String, AppError> { // Restituisce il token (username)
+) -> Result<String, AppError> {
 
-    // 1. Logica di Business (Validazione) [logica spostata da authentication_controller]
+    // 1. Validazione Input
     if payload.username.trim().is_empty() || payload.password.is_empty() {
         return Err(AppError::ValidationError("Username e password non possono essere vuoti.".to_string()));
     }
 
-    // 2. Chiamata al Data Access Layer
+    // 2. Cerca Utente nel DB
     let user = user_repository::find_by_username(db, &payload.username)
         .await?
-        // Se 'find_by_username' restituisce None, l'utente non esiste.
-        .ok_or_else(|| AppError::ValidationError("Invalid username or password.".to_string()))?; //
+        .ok_or_else(|| AppError::ValidationError("Invalid username or password.".to_string()))?;
 
-    // 3. Logica di Business (Verifica)
+    // 3. Verifica Password
     if !verify_password(&payload.password, &user.password_hash)? {
-        // Password errata
-        return Err(AppError::ValidationError("Invalid username or password.".to_string())); //
+        return Err(AppError::ValidationError("Invalid username or password.".to_string()));
     }
 
-    // Successo! Restituiamo l'username che useremo come token
-    Ok(user.username)
+    // 4. GENERA JWT TOKEN (Nuova Logica)
+    let expiration = Utc::now()
+        .checked_add_signed(Duration::hours(24)) // Scade in 24 ore
+        .expect("valid timestamp")
+        .timestamp();
+
+    let claims = Claims {
+        sub: user.username.clone(),
+        user_id: user.id,
+        exp: expiration as usize,
+    };
+
+    // NOTA: In produzione, questa chiave segreta deve stare in una variabile d'ambiente (.env)!
+    // Per il progetto universitario, una costante qui è accettabile ma va commentata.
+    let secret = "segreto_super_segreto_da_non_mettere_nel_codice";
+
+    let token = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_bytes())
+    ).map_err(|e| AppError::ValidationError(format!("Errore creazione token: {}", e)))?;
+
+    Ok(token)
 }
 
 

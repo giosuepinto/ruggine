@@ -1,21 +1,16 @@
-// --- Dichiarazione Moduli ---
-// Questi dicono a Rust di cercare i file/cartelle
+// src/main.rs
+
 mod error;
 mod services;
 mod state;
-mod DTOs; // Ora punta alla cartella 'models'
-
-// === MODULI AGGIUNTI ===
+mod DTOs;
 mod repositories;
 mod controllers;
 mod router;
-// === FINE AGGIUNTE ===
 
-// --- Importazioni Principali ---
 use crate::{
-    // La nostra funzione che crea il router, ora dal modulo 'router'
     router::create_router,
-    state::AppState,       // Il nostro stato
+    state::AppState,
 };
 
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -26,6 +21,13 @@ use std::collections::HashMap;
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+// --- NUOVI IMPORT PER CPU LOGGING ---
+use std::fs::OpenOptions;
+use std::io::Write;
+use sysinfo::{CpuRefreshKind, RefreshKind, System};
+use tokio::time::{interval, Duration};
+use chrono::Local;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -48,30 +50,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     sqlx::migrate!("./migrations").run(&db_pool).await?;
-
     tracing::debug!("Database connesso e migrazioni applicate.");
 
-    // --- Setup Stato Applicazione (Invariato) ---
-    // (Presuppone che state.rs sia stato aggiornato come da nostra discussione)
+    // --- Setup Stato (Invariato) ---
     let connections = Arc::new(RwLock::new(HashMap::new()));
-
     let app_state = Arc::new(AppState {
         db: db_pool,
         connections,
     });
 
-    // --- Setup CORS (Invariato) ---
+    // =================================================================
+    // NUOVO: Task di Logging CPU (Requisito di progetto)
+    // =================================================================
+    tokio::spawn(async move {
+        // Configura sysinfo per leggere solo la CPU (per risparmiare risorse)
+        let mut sys = System::new_with_specifics(
+            RefreshKind::nothing().with_cpu(CpuRefreshKind::everything()),
+        );
+
+        // Timer ogni 2 minuti (120 secondi)
+        let mut ticker = interval(Duration::from_secs(120));
+
+        loop {
+            ticker.tick().await; // Aspetta 2 minuti
+
+            // Aggiorna info CPU
+            sys.refresh_cpu_all();
+
+            // Calcola uso globale CPU
+            let global_cpu_usage = sys.global_cpu_usage();
+
+            // Crea il messaggio di log
+            let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
+            let log_line = format!("[{}] CPU Usage: {:.2}%\n", timestamp, global_cpu_usage);
+
+            // Scrivi nel file (modalità append)
+            // Usa una chiamata bloccante std::fs, ma ogni 2 min è accettabile.
+            // In produzione useremmo tokio::fs, ma qui va bene così.
+            match OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("server_cpu_stats.log")
+            {
+                Ok(mut file) => {
+                    if let Err(e) = file.write_all(log_line.as_bytes()) {
+                        tracing::error!("Impossibile scrivere log CPU: {}", e);
+                    }
+                },
+                Err(e) => tracing::error!("Impossibile aprire file log CPU: {}", e),
+            }
+        }
+    });
+    // =================================================================
+
+    // --- Setup CORS & Server (Invariato) ---
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
 
-    // --- Creazione Router (Invariato nella logica, usa il nuovo import) ---
-    let app = create_router() // Chiama la funzione dal modulo 'router'
+    let app = create_router()
         .with_state(app_state)
         .layer(cors);
 
-    // --- Avvio Server (Invariato) ---
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     let listener = tokio::net::TcpListener::bind(addr).await?;
 

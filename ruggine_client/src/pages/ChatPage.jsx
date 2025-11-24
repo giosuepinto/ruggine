@@ -1,178 +1,125 @@
 // src/pages/ChatPage.jsx
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import '../App.css';
 
-// Piccolo helper per formattare il nome del gruppo
+// Helper per formattare il nome del gruppo
 const formatGroupName = (group, currentUsername) => {
     if (group.is_dm) {
-        // È un DM. Trova l'altro utente.
         const otherUser = group.members.find(m => m.username !== currentUsername);
-        return otherUser ? `DM: ${otherUser.username}` : 'DM Sconosciuto';
+        return otherUser ? otherUser.username : 'Sconosciuto';
     } else {
-        // È un gruppo. Usa il suo nome.
-        return group.group_name || 'Gruppo Senza Nome';
+        return group.group_name || 'Gruppo';
     }
 };
+
+// Helper per ottenere l'iniziale per l'avatar
+const getAvatarInitial = (name) => name ? name.charAt(0).toUpperCase() : '?';
 
 function ChatPage() {
     const socket = useRef(null);
     const navigate = useNavigate();
-    const username = localStorage.getItem('username'); // Per la UI
+    const username = localStorage.getItem('username');
 
-    // --- NUOVI STATI ---
+    // Stati
     const [isConnected, setIsConnected] = useState(false);
-
-    // Lista di tutti i gruppi/DM dell'utente (dal server)
     const [groups, setGroups] = useState([]);
-
-    // L'ID del gruppo attualmente selezionato
     const [activeGroupId, setActiveGroupId] = useState(null);
-
-    // Messaggi (ora è un oggetto: { group_id: [messaggi...] })
-    const [messages, setMessages] = useState({});
-
-    // Input per il messaggio di chat
+    const [messages, setMessages] = useState({}); // { group_id: [msgs] }
     const [input, setInput] = useState('');
 
-    // Input per creare nuovi gruppi/DM
+    // Stati UI per creazione chat
     const [newChatInput, setNewChatInput] = useState('');
-    const [newChatType, setNewChatType] = useState('dm'); // 'dm' o 'group'
-
+    const [newChatType, setNewChatType] = useState('dm'); // 'dm' | 'group'
     const [inviteInput, setInviteInput] = useState('');
 
-    // --- FINE NUOVI STATI ---
-
+    // --- EFFECT: Connessione WebSocket ---
     useEffect(() => {
-        if (!username) {
-            navigate('/');
-            return;
-        }
-
+        if (!username) { navigate('/'); return; }
         const token = localStorage.getItem('token');
+
         socket.current = new WebSocket('ws://127.0.0.1:3000/ws');
 
         socket.current.onopen = () => {
-            console.log('Connesso al server WebSocket!');
+            console.log('WS Connesso');
             setIsConnected(true);
-
-            // Invia il messaggio di autenticazione
-            socket.current.send(JSON.stringify({
-                type: "auth",
-                token: token
-            }));
+            socket.current.send(JSON.stringify({ type: "auth", token: token }));
         };
 
         socket.current.onclose = () => {
-            console.log('Disconnesso.');
+            console.log('WS Disconnesso');
             setIsConnected(false);
         };
 
-        // === GESTORE MESSAGGI (MODIFICATO) ===
         socket.current.onmessage = (event) => {
             const msg = JSON.parse(event.data);
-            const initialMessages = {};
 
-            switch (msg.type) {
-                // Caso 1: Il server ci invia la nostra lista di gruppi
-                case 'update_group_list':
-                    console.log("Ricevuta lista gruppi:", msg.groups);
-                    setGroups(msg.groups);
-
-
-                    for (const group of msg.groups) {
-                        // 'group.messages' è l'array di cronologia dal server
-                        // Lo convertiamo nel formato che la UI usa
-                        initialMessages[group.group_id] = group.messages.map(chatMsg => ({
-                            from: chatMsg.from_username,
-                            content: chatMsg.content
-                        }));
-                    }
-                    setMessages(initialMessages);
-                    break;
-
-                // Caso 2: Riceviamo un messaggio di chat
-                case 'group_chat':
-                    console.log("Ricevuto messaggio di chat:", msg);
-                    setMessages(prevMessages => ({
-                        ...prevMessages,
-                        // Aggiungi il messaggio al gruppo corretto
-                        [msg.group_id]: [
-                            ...(prevMessages[msg.group_id] || []),
-                            { from: msg.from_username, content: msg.content }
-                        ]
+            if (msg.type === 'update_group_list') {
+                setGroups(msg.groups);
+                // Popola i messaggi iniziali se non presenti
+                const initialMsgs = {};
+                msg.groups.forEach(g => {
+                    // Trasforma ServerMessage in formato UI interno
+                    initialMsgs[g.group_id] = g.messages.map(m => ({
+                        from: m.from_username,
+                        content: m.content
                     }));
-                    break;
-
-                // Caso 3: Errore dal server
-                case 'error':
-                    console.error("Errore dal server:", msg.content);
-                    alert(`Errore: ${msg.content}`); // Manteniamo l'alert per informare l'utente
-
-                    // --- NUOVA LOGICA DI REDIRECT ---
-                    // Controlliamo se è un errore di autenticazione
-                    if (msg.content.includes("Token non valido") || msg.content.includes("autenticarti")) {
-
-                        console.log("Errore di autenticazione, pulizia token e redirect.");
-
-                        // Pulisce i dati errati dal localStorage
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('username');
-
-                        // Torna alla pagina di login
-                        navigate('/');
-                    }
-                    break;
+                });
+                // Merge intelligente: se ho già messaggi locali (più recenti), non sovrascriverli brutalmente
+                // Per semplicità qui sostituiamo o facciamo merge se vuoto.
+                setMessages(prev => {
+                    const newState = { ...initialMsgs }; // Parte con lo storico
+                    // Se avevamo già stato attivo, potremmo volerlo preservare,
+                    // ma qui ci fidiamo che update_group_list arrivi all'inizio.
+                    // Per una gestione perfetta servirebbe un merge più complesso.
+                    return newState;
+                });
+            }
+            else if (msg.type === 'group_chat') {
+                setMessages(prev => ({
+                    ...prev,
+                    [msg.group_id]: [
+                        ...(prev[msg.group_id] || []),
+                        { from: msg.from_username, content: msg.content }
+                    ]
+                }));
+            }
+            else if (msg.type === 'error') {
+                if (msg.content.includes("Token") || msg.content.includes("autenticarti")) {
+                    localStorage.clear();
+                    navigate('/');
+                } else {
+                    alert(msg.content);
+                }
             }
         };
 
-        // Cleanup
-        return () => {
-            if (socket.current) socket.current.close();
-        };
+        return () => { if (socket.current) socket.current.close(); };
     }, [username, navigate]);
 
-    // === FUNZIONE PER INVIARE UN MESSAGGIO (MODIFICATA) ===
-    const handleSendMessage = () => {
-        if (!input.trim() || !activeGroupId) {
-            // Non inviare se l'input è vuoto o nessun gruppo è selezionato
-            return;
-        }
 
+    // --- HANDLERS ---
+    const handleSendMessage = () => {
+        if (!input.trim() || !activeGroupId) return;
         socket.current.send(JSON.stringify({
             type: "send_group_message",
-            group_id: activeGroupId, // Invia l'ID del gruppo attivo
+            group_id: activeGroupId,
             content: input
         }));
         setInput('');
     };
 
-    // === FUNZIONE PER CREARE UN NUOVO GRUPPO O DM ===
     const handleCreateChat = () => {
         if (!newChatInput.trim()) return;
+        const type = newChatType === 'dm' ? "create_dm" : "create_group";
+        const payload = newChatType === 'dm' ? { username: newChatInput } : { name: newChatInput };
 
-        if (newChatType === 'dm') {
-            // Invia richiesta per creare un DM
-            socket.current.send(JSON.stringify({
-                type: "create_dm",
-                username: newChatInput
-            }));
-        } else {
-            // Invia richiesta per creare un Gruppo
-            socket.current.send(JSON.stringify({
-                type: "create_group",
-                name: newChatInput
-            }));
-        }
+        socket.current.send(JSON.stringify({ type, ...payload }));
         setNewChatInput('');
     };
 
     const handleInvite = () => {
-        if (!inviteInput.trim() || !activeGroupId) {
-            alert("Devi selezionare un gruppo e inserire un username da invitare.");
-            return;
-        }
-
+        if (!inviteInput.trim() || !activeGroupId) return;
         socket.current.send(JSON.stringify({
             type: "invite_to_group",
             group_id: activeGroupId,
@@ -181,128 +128,148 @@ function ChatPage() {
         setInviteInput('');
     };
 
-
     const handleLogout = () => {
-        console.log("Eseguo il logout...");
-
-        // 1. Chiudi il socket
-        if (socket.current) {
-            socket.current.close();
-        }
-
-        // 2. Pulisci il localStorage
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
-
-        // 3. Torna alla pagina di login
+        if (socket.current) socket.current.close();
+        localStorage.clear();
         navigate('/');
     };
 
-    // Helper per ottenere i messaggi del gruppo attivo
-    const activeMessages = messages[activeGroupId] || [];
+    // --- RENDER HELPERS ---
+    const activeGroup = groups.find(g => g.group_id === activeGroupId);
+    const activeGroupMessages = messages[activeGroupId] || [];
+
+    // Calcolo anteprima ultimo messaggio per ogni gruppo
+    const getLastMessagePreview = (groupId) => {
+        const groupMsgs = messages[groupId];
+        if (!groupMsgs || groupMsgs.length === 0) return "Nessun messaggio";
+
+        const lastMsg = groupMsgs[groupMsgs.length - 1];
+        const isMe = lastMsg.from === username;
+        const author = isMe ? "Tu" : lastMsg.from;
+
+        let content = lastMsg.content;
+        if (content.length > 20) content = content.substring(0, 20) + "...";
+
+        return <span title={lastMsg.content}><span className="chat-preview-author">{author}:</span> {content}</span>;
+    };
 
     return (
-        <div style={{ display: 'flex', height: '100vh', fontFamily: 'Arial, sans-serif' }}>
+        <div className="app-container">
 
-            {/* Colonna Sinistra: Lista Gruppi e Creazione */}
-            <div style={{ width: '300px', borderRight: '1px solid #ccc', display: 'flex', flexDirection: 'column' }}>
-
-                {/* Area Creazione Chat */}
-                <div style={{ padding: '10px', borderBottom: '1px solid #ccc' }}>
-                    <h3>Nuova Chat</h3>
-                    <input
-                        type="text"
-                        placeholder={newChatType === 'dm' ? "Username utente..." : "Nome gruppo..."}
-                        value={newChatInput}
-                        onChange={(e) => setNewChatInput(e.target.value)}
-                        style={{ width: '90%' }}
-                    />
-                    <div style={{ marginTop: '5px' }}>
-                        <button onClick={() => setNewChatType('dm')}>DM</button>
-                        <button onClick={() => setNewChatType('group')}>Gruppo</button>
-                        <button onClick={handleCreateChat} style={{ float: 'right' }}>Crea</button>
-                    </div>
+            {/* 1. NAVBAR SUPERIORE */}
+            <div className="navbar">
+                <div className="nav-brand">
+                    <span className={`status-dot ${isConnected ? 'status-online' : 'status-offline'}`}></span>
+                    Ruggine Chat
                 </div>
-
-                {/* Area Lista Gruppi */}
-                <div style={{ flex: 1, overflowY: 'auto' }}>
-                    {groups.map(group => (
-                        <div
-                            key={group.group_id}
-                            onClick={() => setActiveGroupId(group.group_id)}
-                            style={{
-                                padding: '15px',
-                                borderBottom: '1px solid #eee',
-                                cursor: 'pointer',
-                                backgroundColor: group.group_id === activeGroupId ? '#e0f7fa' : 'transparent'
-                            }}
-                        >
-                            {formatGroupName(group, username)}
-                        </div>
-                    ))}
-                </div>
-
-                <div style={{ padding: '10px', borderTop: '1px solid #ccc' }}>
-                    <p>Loggato come: <strong>{username}</strong></p>
-                    <p>Stato: {isConnected ? 'Connesso' : 'Disconnesso'}</p>
-                    {/* --- PULSANTE AGGIUNTO --- */}
-                    <button onClick={handleLogout} style={{ width: '100%', padding: '8px', marginTop: '10px' }}>
-                        Logout
-                    </button>
+                <div className="nav-user-info">
+                    <span>Ciao, <strong>{username}</strong></span>
+                    <button onClick={handleLogout} className="logout-btn">Logout</button>
                 </div>
             </div>
 
-            {/* Colonna Destra: Finestra Chat */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {/* 2. AREA CONTENUTO */}
+            <div className="main-content">
 
-                {/* Area Messaggi */}
-                <div style={{ flex: 1, padding: '20px', overflowY: 'auto', backgroundColor: '#f9f9f9' }}>
-
-                    {/* --- BLOCCO INVITO AGGIUNTO --- */}
-                    {activeGroupId && !groups.find(g => g.group_id === activeGroupId)?.is_dm && (
-                        <div style={{ paddingBottom: '15px', borderBottom: '1px solid #eee', marginBottom: '15px' }}>
+                {/* SIDEBAR (Lista Chat) */}
+                <div className="sidebar">
+                    {/* Header Sidebar: Creazione */}
+                    <div className="sidebar-header">
+                        <div className="new-chat-controls">
                             <input
-                                type="text"
-                                placeholder="Username da invitare..."
-                                value={inviteInput}
-                                onChange={(e) => setInviteInput(e.target.value)}
-                                style={{ marginRight: '10px' }}
+                                type="text" className="new-chat-input" placeholder="Cerca o crea..."
+                                value={newChatInput} onChange={e => setNewChatInput(e.target.value)}
                             />
-                            <button onClick={handleInvite}>Invita</button>
+                            <button className="create-btn" onClick={handleCreateChat}>+</button>
                         </div>
-                    )}
-                    {/* --- FINE BLOCCO INVITO --- */}
+                        <div style={{marginTop: '5px', display: 'flex', gap: '5px', justifyContent: 'center'}}>
+                            <button className={`mini-btn ${newChatType === 'dm' ? 'active' : ''}`} onClick={() => setNewChatType('dm')}>DM</button>
+                            <button className={`mini-btn ${newChatType === 'group' ? 'active' : ''}`} onClick={() => setNewChatType('group')}>Gruppo</button>
+                        </div>
+                    </div>
 
-                    {activeGroupId ? (
-                        activeMessages.map((msg, index) => (
-                            <div key={index} style={{ marginBottom: '10px' }}>
-                                <strong style={{ color: msg.from === username ? '#007bff' : '#28a745' }}>
-                                    {msg.from}:
-                                </strong>
-                                <span style={{ marginLeft: '10px' }}>{msg.content}</span>
-                            </div>
-                        ))
-                    ) : (
-                        <div style={{ textAlign: 'center', color: '#888', marginTop: '50px' }}>
-                            Seleziona una chat per iniziare a messaggiare.
-                        </div>
-                    )}
+                    {/* Lista Chat */}
+                    <div className="chat-list">
+                        {groups.map(group => {
+                            const name = formatGroupName(group, username);
+                            return (
+                                <div
+                                    key={group.group_id}
+                                    className={`chat-item ${activeGroupId === group.group_id ? 'active' : ''}`}
+                                    onClick={() => setActiveGroupId(group.group_id)}
+                                >
+                                    <div className="avatar">{getAvatarInitial(name)}</div>
+                                    <div className="chat-info">
+                                        <div className="chat-name">{name}</div>
+                                        <div className="chat-preview">{getLastMessagePreview(group.group_id)}</div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
 
-                {/* Area Input Messaggio */}
-                <div style={{ padding: '20px', borderTop: '1px solid #ccc', display: 'flex' }}>
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        style={{ flex: 1, padding: '10px', marginRight: '10px' }} // flex: 1 si prende lo spazio
-                        placeholder={activeGroupId ? "Scrivi un messaggio..." : "Seleziona una chat"}
-                        disabled={!activeGroupId}
-                    />
-                    <button onClick={handleSendMessage} style={{ padding: '10px 20px' }} disabled={!activeGroupId}>
-                        Invia
-                    </button>
+                {/* CHAT WINDOW (Area Messaggi) */}
+                <div className="chat-window">
+                    {activeGroupId ? (
+                        <>
+                            {/* Header Chat */}
+                            <div className="chat-header">
+                                <div className="header-info">
+                                    <h3>{formatGroupName(activeGroup, username)}</h3>
+                                    <span>
+                                        {activeGroup.is_dm
+                                            ? "Chat privata"
+                                            : `${activeGroup.members.length} membri: ` + activeGroup.members.map(m => m.username).join(", ")}
+                                    </span>
+                                </div>
+                                {/* Sezione Inviti (Solo per Gruppi) */}
+                                {!activeGroup.is_dm && (
+                                    <div style={{display: 'flex', gap: '5px'}}>
+                                        <input
+                                            placeholder="Invita utente..."
+                                            value={inviteInput} onChange={e => setInviteInput(e.target.value)}
+                                            style={{padding: '5px', borderRadius: '5px', border: '1px solid #ccc'}}
+                                        />
+                                        <button onClick={handleInvite} className="mini-btn active">Invita</button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Messaggi */}
+                            <div className="messages-container">
+                                {activeGroupMessages.map((msg, idx) => {
+                                    const isMe = msg.from === username;
+                                    return (
+                                        <div key={idx} className={`message ${isMe ? 'sent' : 'received'}`}>
+                                            <span className="msg-author">{msg.from}</span>
+                                            {msg.content}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Input */}
+                            <div className="input-area">
+                                <input
+                                    className="message-input"
+                                    placeholder="Scrivi un messaggio..."
+                                    value={input}
+                                    onChange={e => setInput(e.target.value)}
+                                    onKeyPress={e => e.key === 'Enter' && handleSendMessage()}
+                                />
+                                <button className="send-btn" onClick={handleSendMessage} disabled={!input.trim()}>
+                                    ➤
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="empty-state">
+                            <div style={{fontSize: '4rem', marginBottom: '20px'}}>💬</div>
+                            <h2>Benvenuto in Ruggine Chat</h2>
+                            <p>Seleziona una chat dalla barra laterale o creane una nuova per iniziare.</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
