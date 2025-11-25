@@ -1,142 +1,148 @@
-## Progetto Ruggine - Chat App
+# Ruggine: App di Chat Testuale
 
-Questo progetto è l'implementazione della traccia "Ruggine: App di Chat Testuale".
-L'architettura scelta prevede un backend in Rust (con Axum / Tokio) e un frontend in React (come Web App).
+## 1. Introduzione
 
----
+Il progetto **Ruggine** è un'applicazione di messaggistica istantanea Client/Server sviluppata per il corso di Programmazione di Sistema.
+L'obiettivo è fornire una piattaforma performante, scalabile e sicura per lo scambio di messaggi testuali in tempo reale, supportando chat private (DM), gruppi e una chat globale persistente.
 
-## 🚀 Stato Attuale del Progetto
-
-L'applicazione ha superato la fase di "scheletro" ed è ora un'applicazione di chat funzionale basata su gruppi, con un backend robusto e un'architettura multi-modulo.
+L'architettura si basa su un backend in **Rust** (focalizzato su sicurezza e concorrenza) e un frontend in **React** (per una user experience moderna).
 
 ---
 
-## ⚙️ Backend (Server Rust)
+## 2. Architettura del Sistema
 
-Il server è stato profondamente ristrutturato per scalabilità e manutenibilità.
+Il sistema segue un'architettura a tre livelli (Three-Tier Architecture) con comunicazione ibrida HTTP/WebSocket.
+```text
+[ FRONTEND: React + Vite ]
+^      ^
+|      |
+(HTTP/REST) (WebSocket JSON)
+|      |
+v      v
+[ BACKEND: Rust + Axum ]
+|
++--- [ Controllers ] (Gestione I/O e Routing)
+|         |
+|         v
++--- [ Service Layer ] (Logica di Business: Auth, Inviti, Chat)
+|         |
+|         v
++--- [ Repository Layer ] (Query SQL e Accesso Dati)
+|
+v
+[ DATABASE: SQLite ]
+```
 
-1. Architettura
-- Multi-Modulo: Il codice non è più in un singolo main.rs. È stato diviso in un'architettura a moduli:
-    - src/routes/ (i "Controllers" che gestiscono le richieste HTTP e WS)
-    - src/services/ (la logica di business, es. hashing password)
-    - src/models.rs (definizioni JSON per la comunicazione Client/Server)
-    - src/state.rs (definizione dello stato condiviso dell'app)
-    - src/error.rs (gestione centralizzata degli errori)
+### Tecnologie Utilizzate
 
-2. Database (SQLite)
-- Migrazioni Automatiche: Il server esegue automaticamente le migrazioni del database (sqlx::migrate!) all'avvio, creando il DB e le tabelle se non esistono.
-- Schemi: Oltre alla tabella `users`, il DB ora include:
-    - `groups`: Memorizza tutte le "stanze" (sia gruppi che DM).
-    - `group_members`: Tabella ponte che collega utenti e gruppi.
-    - `messages`: Salva la cronologia di tutti i messaggi inviati.
+**Backend:**
+* **Linguaggio:** Rust
+* **Framework Web:** Axum (basato su Tokio per l'asincronia)
+* **Database:** SQLite (tramite driver SQLx con query asincrone)
+* **Sicurezza:** Argon2 (hashing password), JSON Web Token (JWT)
+* **Monitoraggio:** Sysinfo (logging CPU)
 
-3. Autenticazione e Sicurezza
-- Registrazione: POST /register
-    - Validazione Server-Side: Rifiuta registrazioni con username o password vuoti o troppo corti.
-- Login: POST /login
-    - Sicuro: Non restituisce più HTTP 200 per login falliti. Invia un HTTP 400 con un messaggio generico ("Invalid username or password.") per prevenire la User Enumeration.
-
-4. Gestione WebSocket (GET /ws)
-   Questo è il cuore del backend ed è stato completamente riscritto.
-
-- Protocollo JSON: La comunicazione è passata da semplici stringhe a un protocollo JSON strutturato (ClientMessage e ServerMessage).
-- Identificazione: Non c'è più un broadcast "pappagallo". Al contrario:
-    1. Il client deve inviare un messaggio {"type": "auth", "token": "..."} come prima cosa.
-    2. Il server valida il token e associa il socket a un user_id.
-- Supporto Multi-Connessione:
-    - Risolto il bug critico della "race condition".
-    - Lo stato (AppState) ora usa una mappa nidificata: HashMap<UserID, HashMap<SocketID, Sender>>.
-    - Ogni connessione riceve un Uuid unico, permettendo a un singolo utente (es. `gio`) di essere connesso da più browser o dispositivi contemporaneamente.
-    - Il cleanup alla disconnessione rimuove solo il SocketID specifico, lasciando intatte le altre connessioni dell'utente.
-- Logica Gruppi & DM:
-    - Il server adotta un'architettura unificata: un Messaggio Diretto (DM) è semplicemente un gruppo con `is_dm: true` e 2 membri.
-    - ClientMessage::CreateDM: Crea un nuovo gruppo DM e aggiunge entrambi i membri.
-    - ClientMessage::CreateGroup: Crea un gruppo standard, aggiungendo il creatore come primo membro.
-    - ClientMessage::InviteToGroup: Aggiunge un nuovo utente a un gruppo esistente (e notifica tutti i membri).
-- Logica Messaggi:
-    - ClientMessage::SendGroupMessage:
-        1. Il server riceve il messaggio.
-        2. Lo salva nel database (nella tabella `messages`).
-        3. Identifica tutti i membri di quel `group_id`.
-        4. Invia il messaggio *solo* ai socket attivi (online) di quei membri.
+**Frontend:**
+* **Framework:** React
+* **Build Tool:** Vite
+* **Stato:** React Context API (`WebSocketContext`)
+* **Navigazione:** React Router DOM
 
 ---
 
-## 🖥️ Frontend (Client React)
+## 3. Struttura del Progetto (Backend)
 
-L'interfaccia utente è stata completamente ridisegnata per gestire la logica dei gruppi.
+Il backend è stato rifattorizzato passando da un singolo file monolitico a una **Layered Architecture** modulare per garantire manutenibilità e separazione delle responsabilità.
 
-1. UI (Layout Multi-Colonna)
-- La ChatPage non è più una singola chat, ma un layout in stile Slack/WhatsApp:
-    - Colonna Sinistra:
-        - Un'area per creare nuovi Gruppi o DM.
-        - Un elenco dinamico di tutti i gruppi e DM dell'utente.
-        - Un'area utente con il nome e un pulsante di Logout.
-    - Colonna Destra:
-        - Un'area per invitare utenti al gruppo attualmente selezionato (nascosta per i DM).
-        - La finestra della chat che mostra i messaggi.
-        - L'area di input del messaggio.
+### File System
+* `src/main.rs`: Entry point. Configura il logging, la connessione al DB, avvia il task di monitoraggio CPU e il server HTTP.
+* `src/router.rs`: Definisce le rotte HTTP (`/login`, `/register`) e WebSocket (`/ws`).
+* `src/state.rs`: Gestisce lo stato condiviso in memoria (connessioni attive) thread-safe tramite `Arc<RwLock<...>>`.
+* `src/error.rs`: Gestione centralizzata degli errori con mapping su codici HTTP.
 
-2. Gestione dello Stato e del Protocollo
-- Stato: Il client gestisce uno stato centrale che include `groups: []` (l'elenco di tutti i gruppi) e `activeGroupId: null` (la chat attualmente selezionata).
-- Flusso di Connessione:
-    1. Al login (in LoginPage), salva *sia* `username` che `token` nel `localStorage`.
-    2. In ChatPage, invia il messaggio {"type": "auth", "token": ...}.
-    3. Riceve un messaggio {"type": "update_group_list", ...} dal server e popola la colonna di sinistra.
-- Invio Messaggi: Invia messaggi JSON strutturati (es. `create_dm`, `send_group_message`, `invite_to_group`).
-- Gestione Errori:
-    - Risolto il bug del "loop di login": un alert per un token non valido ora pulisce il `localStorage` e reindirizza correttamente a `/`.
-    - Gli errori di login/registrazione vengono mostrati sotto il modulo nella LoginPage.
-
-3. Correzioni UI/UX
-- Risolto il bug di allineamento del pulsante "Invia" (ora usa Flexbox).
-- Implementato un pulsante di Logout funzionante.
+### Moduli Funzionali
+1.  **Controllers (`src/controllers/`)**: Gestiscono l'I/O. Ricevono le richieste (HTTP o messaggi WS), validano l'input basilare e chiamano i servizi. Non contengono logica di business.
+2.  **Services (`src/services/`)**: Contengono la logica di business pura (es. regole per gli inviti, hashing password, gestione cooldown).
+3.  **Repositories (`src/repositories/`)**: Eseguono le query SQL pure. Nessuna logica di business qui, solo accesso ai dati.
+4.  **DTOs (`src/DTOs/`)**: Definiscono le strutture dati JSON per la comunicazione Client-Server (es. `ClientMessage`, `ServerMessage`).
 
 ---
 
-## 🗺️ Evoluzione del Progetto (La Nostra Storia)
+## 4. Scelte Implementative e Funzionalità Chiave
 
-1. Fase 1: Scheletro (Il Vecchio README)
-    - Autenticazione HTTP (insicura) e un singolo main.rs.
-    - Un WebSocket "pappagallo" che inoltrava stringhe a tutti.
+### 4.1 Gestione Connessioni e Multi-Device
+Il server supporta connessioni multiple per lo stesso utente (es. PC e Telefono contemporaneamente).
+* **Struttura:** `HashMap<UserId, HashMap<SocketUUID, Sender>>`.
+* Ogni tab/dispositivo ha un UUID univoco. Quando un utente si disconnette, viene rimosso solo quel socket specifico, mantenendo attive le altre sessioni.
 
-2. Fase 2: Architettura e Refactoring
-    - Spostamento da un singolo file a un'architettura multi-modulo (routes, services, models, ecc.).
-    - Implementazione della migrazione automatica del DB all'avvio.
+### 4.2 Protocollo di Comunicazione
+La comunicazione avviene tramite messaggi JSON tipizzati.
+* **Client -> Server:** `Auth`, `CreateGroup`, `InviteToGroup`, `HandleInvitation`, `SendGroupMessage`.
+* **Server -> Client:** `UpdateGroupList` (include cronologia), `UpdateInvitationsList`, `GroupChat`, `Error`.
 
-3. Fase 3: Identificazione e JSON
-    - Abbandono delle stringhe per un protocollo JSON completo (ClientMessage/ServerMessage).
-    - Implementazione del flusso di autenticazione WebSocket {"type": "auth"}.
+### 4.3 Sistema di Inviti e Cooldown (Logica Avanzata)
+Per evitare spam e gestire la privacy, la creazione di chat non è immediata (eccetto per i propri gruppi).
+1.  **Invio:** Un utente invia una richiesta (`InviteToGroup` o `CreateDM`).
+2.  **Pending:** L'invito viene salvato nel DB con stato `pending`.
+3.  **Notifica:** Il destinatario vede l'invito in tempo reale nella pagina dedicata.
+4.  **Decisione:**
+    * **Accetta:** L'utente viene aggiunto al gruppo e la chat appare nella lista.
+    * **Rifiuta:** L'invito passa a `rejected`.
+5.  **Cooldown:** Se un invito viene rifiutato, il sistema impedisce nuovi inviti tra le stesse parti per **2 minuti**. Il controllo viene effettuato lato server confrontando il timestamp `updated_at` del rifiuto.
 
-4. Fase 4: Multi-Connessione (Risoluzione Bug)
-    - Risolto il bug critico della "race condition" (un utente che si riconnetteva "cancellava" la propria connessione).
-    - Evoluzione dello AppState per usare Uuid e la mappa nidificata HashMap<UserID, HashMap<SocketID, Sender>>.
+### 4.4 Sicurezza
+* **Autenticazione:** Utilizzo di **JWT (JSON Web Token)** firmati dal server. Il frontend non salva mai la password, ma solo il token.
+* **WebSocket Auth:** La prima azione del socket è l'invio del token JWT per l'identificazione.
+* **Validazione:** Controlli server-side su lunghezza password, username vuoti e tentativi di impersonificazione.
+* **Password Hashing:** Utilizzo dell'algoritmo **Argon2** con salt casuale per ogni utente.
 
-5. Fase 5: Logica Gruppi & DM
-    - Aggiunte le tabelle `groups`, `group_members`, `messages` al DB.
-    - Implementata la logica "DM è un gruppo" nel backend.
-    - Sostituito il broadcast globale con un inoltro mirato ai membri del gruppo.
-    - Implementata la logica per creare gruppi, DM e invitare utenti.
-    - Rifacimento completo della UI del frontend per supportare i gruppi.
+### 4.5 Persistenza e Cronologia
+* Tutti i dati (Utenti, Gruppi, Membri, Inviti, Messaggi) sono persistiti su **SQLite**.
+* Al login, il server recupera automaticamente gli ultimi 50 messaggi per ogni chat e li invia al client, garantendo la continuità della conversazione anche dopo un refresh della pagina.
 
-6. Fase 6: Sicurezza e Stabilità
-    - Corretto il bug catastrofico del login (restituiva sempre HTTP 200).
-    - Aggiunta la validazione server-side per la registrazione.
-    - Corretti i bug di reindirizzamento e UI nel frontend.
-    - Aggiunto il Logout.
+### 4.6 Monitoraggio Risorse
+Come da requisito, il server avvia un task asincrono (`tokio::spawn`) che utilizza la libreria `sysinfo` per campionare l'utilizzo della CPU ogni **2 minuti** e scriverlo nel file `server_cpu_stats.log`.
 
 ---
 
-## 🚧 Cosa Manca (Prossimi Passi)
+## 5. Manuale Utente (Frontend)
 
-1. Cronologia Messaggi (Requisito Chiave)
-    - Backend: Modificare ClientMessage::Auth per far sì che, dopo l'autenticazione, il server esegua una query al DB e invii la cronologia dei messaggi (es. ultimi 50) per i gruppi dell'utente.
-    - Frontend: Gestire questo nuovo ServerMessage::ChatHistory e usarlo per popolare lo stato `messages` al caricamento, risolvendo il problema della chat vuota al refresh.
+### Installazione e Avvio
+1.  **Backend:**
+    ```bash
+    cd ruggine_server
+    cargo run --release
+    ```
+    *(Al primo avvio il server creerà automaticamente il DB e applicherà le migrazioni).*
 
-2. Miglioramenti UI/UX
-    - Invio con "Invio": Aggiungere un onKeyPress all'input dei messaggi per inviare con il tasto Invio.
-    - Barra Info Gruppo: Aggiungere una barra in cima alla finestra della chat (colonna destra) che mostri "Parlando con: Ale" (per i DM) o "Gruppo: Test Inviti (gio, ale, fra)" (per i gruppi).
+2.  **Frontend:**
+    ```bash
+    cd ruggine_client
+    npm install
+    npm run dev
+    ```
 
-3. Requisiti Finali del Progetto
-    - Logging CPU: Aggiungere `sysinfo` al backend e avviare un task che registri l'uso della CPU ogni 2 minuti in un file di log.
-    - Dimensione Eseguibile: Compilare il server in modalità `release` (cargo build --release) e annotare la dimensione finale dell'eseguibile in questo README.
+### Guida all'Uso
+1.  **Login/Registrazione:** Interfaccia unificata. Inserire credenziali valide (min 3 caratteri user, min 4 pass).
+2.  **Home (Le mie Chat):**
+    * A sinistra: Lista delle chat attive e Chat Globale.
+    * Pulsante **`+`**: Apre il pannello per creare un nuovo Gruppo o richiedere un DM.
+    * A destra: Finestra di chat.
+3.  **Inviti:**
+    * Accedere alla sezione "Inviti" dalla Navbar.
+    * Visualizzare richieste inviate (con stato Pending/Rejected) e ricevute.
+    * Accettare o Rifiutare le richieste in arrivo.
+
+---
+
+## 6. Dati Tecnici TODO!
+
+* **Dimensione Eseguibile (Release):** [INSERIRE QUI LA DIMENSIONE] (su architettura macOS/Linux a 64bit).
+* **Utilizzo CPU average:** TODO
+* **Database:** Singolo file `ruggine.db` portabile.
+
+---
+
+## 7. Conclusioni
+
+Il progetto soddisfa tutti i requisiti funzionali e non funzionali della traccia. L'adozione di Rust ha garantito prestazioni elevate e memory safety, mentre l'architettura a micro-componenti di React ha permesso di creare un'interfaccia utente reattiva e complessa (gestione stati inviti/chat in tempo reale).
