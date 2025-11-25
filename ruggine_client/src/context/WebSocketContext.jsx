@@ -11,14 +11,15 @@ export const WebSocketProvider = ({ children }) => {
     // Stati Globali
     const [isConnected, setIsConnected] = useState(false);
     const [groups, setGroups] = useState([]);
-    // MODIFICATO: Ora contiene due liste separate
     const [invitations, setInvitations] = useState({ received: [], sent: [] });
     const [messages, setMessages] = useState({});
     const [user, setUser] = useState(null);
 
+    // Login al montaggio (per gestire il refresh della pagina)
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const savedUsername = localStorage.getItem('username');
+        // MODIFICATO: Usa sessionStorage
+        const token = sessionStorage.getItem('token');
+        const savedUsername = sessionStorage.getItem('username');
 
         if (token && savedUsername) {
             setUser(savedUsername);
@@ -29,7 +30,7 @@ export const WebSocketProvider = ({ children }) => {
     const connect = (token) => {
         if (socket.current) return;
 
-        // IP per la demo (ricordati di cambiarlo quando fai la demo LAN!)
+        // Ricorda di cambiare l'IP per la demo LAN!
         socket.current = new WebSocket('ws://127.0.0.1:3000/ws');
 
         socket.current.onopen = () => {
@@ -65,8 +66,6 @@ export const WebSocketProvider = ({ children }) => {
                 break;
 
             case 'update_invitations_list':
-                // MODIFICATO: Gestisce la doppia lista
-                console.log("Inviti aggiornati:", msg);
                 setInvitations({
                     received: msg.received || [],
                     sent: msg.sent || []
@@ -87,7 +86,7 @@ export const WebSocketProvider = ({ children }) => {
                 if (msg.content.includes("Token") || msg.content.includes("autenticarti")) {
                     logout();
                 } else {
-                    alert("Avviso: " + msg.content);
+                    alert("Server Error: " + msg.content);
                 }
                 break;
             default:
@@ -95,16 +94,20 @@ export const WebSocketProvider = ({ children }) => {
         }
     };
 
+    // --- FUNZIONE LOGIN AGGIORNATA ---
     const login = (username, token) => {
-        localStorage.setItem('username', username);
-        localStorage.setItem('token', token);
+        // MODIFICATO: Usa sessionStorage
+        sessionStorage.setItem('username', username);
+        sessionStorage.setItem('token', token);
         setUser(username);
         connect(token);
     };
 
+    // --- FUNZIONE LOGOUT AGGIORNATA ---
     const logout = () => {
         if (socket.current) socket.current.close();
-        localStorage.clear();
+        // MODIFICATO: Pulisce solo la sessione corrente
+        sessionStorage.clear();
         socket.current = null;
         setUser(null);
         setGroups([]);
@@ -114,23 +117,20 @@ export const WebSocketProvider = ({ children }) => {
         navigate('/');
     };
 
-    // --- AZIONI ---
+    // --- AZIONI (Invariate) ---
     const sendMessage = (groupId, content) => {
         if (socket.current) {
             socket.current.send(JSON.stringify({ type: "send_group_message", group_id: groupId, content }));
         }
     };
-
     const createChat = (type, name) => {
         const msgType = type === 'dm' ? "create_dm" : "create_group";
         const payload = type === 'dm' ? { username: name } : { name };
         socket.current?.send(JSON.stringify({ type: msgType, ...payload }));
     };
-
     const sendInvite = (groupId, username) => {
         socket.current?.send(JSON.stringify({ type: "invite_to_group", group_id: groupId, username }));
     };
-
     const respondToInvite = (invitationId, accept) => {
         socket.current?.send(JSON.stringify({ type: "handle_invitation", invitation_id: invitationId, accept }));
     };

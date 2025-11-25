@@ -5,7 +5,7 @@ import '../App.css';
 import { useWebSocket } from '../context/WebSocketContext';
 
 function LoginPage() {
-    const { login } = useWebSocket(); // Usiamo la nuova funzione login
+    const { login } = useWebSocket();
 
     const [isLoginMode, setIsLoginMode] = useState(true);
     const [username, setUsername] = useState('');
@@ -13,8 +13,6 @@ function LoginPage() {
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
 
-    // navigate non serve più direttamente qui se lo gestisce il context,
-    // ma possiamo tenerlo se vogliamo fare redirect manuale.
     const navigate = useNavigate();
 
     const handleApiCall = async (e) => {
@@ -36,12 +34,15 @@ function LoginPage() {
             if (response.ok) {
                 setMessage(data.message);
                 if (isLoginMode) {
-                    // === FIX QUI ===
-                    // Usiamo la funzione del context che aggiorna lo stato 'user'
-                    // data.message contiene il TOKEN JWT
-                    login(username, data.message);
+                    // === MODIFICATO PER SESSION STORAGE ===
+                    // Se usiamo il context login:
+                    // login(username, data.message);
+                    // navigate('/chat');
 
-                    navigate('/chat');
+                    // SE invece usiamo il refresh forzato (scelta consigliata per pulizia totale):
+                    sessionStorage.setItem('username', username);
+                    sessionStorage.setItem('token', data.message);
+                    window.location.href = '/chat'; // Forza reload pulito
                 } else {
                     setIsLoginMode(true);
                     setPassword('');

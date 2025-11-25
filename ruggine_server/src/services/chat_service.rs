@@ -194,6 +194,12 @@ pub async fn handle_create_dm(
         return Err(AppError::ValidationError("Non puoi creare un DM con te stesso.".to_string()));
     }
 
+    // --- NUOVO CONTROLLO DUPLICATI ---
+    if let Some(_) = group_repository::find_existing_dm_between_users(&state.db, creator_user_id, target_user.id).await? {
+        return Err(AppError::ValidationError("Esiste già una chat attiva con questo utente.".to_string()));
+    }
+    // ---------------------------------
+
     // 2. Controlli (Pending & Cooldown)
     if let Some(_) = invitation_repository::find_pending_dm_invitation(&state.db, creator_user_id, target_user.id).await? {
         return Err(AppError::ValidationError("Esiste già una richiesta di DM in attesa.".to_string()));
@@ -201,6 +207,11 @@ pub async fn handle_create_dm(
 
     if invitation_repository::is_in_cooldown_dm(&state.db, creator_user_id, target_user.id).await? {
         return Err(AppError::ValidationError("Richiesta rifiutata di recente. Attendi 2 minuti.".to_string()));
+    }
+
+    // Controllo se esiste già un invito pendente...
+    if let Some(_) = invitation_repository::find_pending_dm_invitation(&state.db, creator_user_id, target_user.id).await? {
+        return Err(AppError::ValidationError("Esiste già una richiesta di DM in attesa.".to_string()));
     }
 
     // 3. Crea Gruppo DM + Membro (Solo Creatore) + Invito

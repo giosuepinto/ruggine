@@ -1,84 +1,66 @@
 // src/pages/InvitesPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
 import '../App.css';
 
 function InvitesPage() {
-    // Estraiamo invitations (che ora è un oggetto {received, sent})
-    const { invitations, respondToInvite, createChat } = useWebSocket();
+    const { invitations, respondToInvite } = useWebSocket();
+    // Stato locale per forzare il refresh del timer ogni 10 secondi
+    // così gli inviti scaduti spariscono dalla UI dinamicamente
+    const [, setTick] = useState(0);
 
-    const [newChatInput, setNewChatInput] = useState('');
-    const [newChatType, setNewChatType] = useState('dm'); // 'dm' | 'group'
+    useEffect(() => {
+        const timer = setInterval(() => setTick(t => t + 1), 5000); // Check ogni 5s
+        return () => clearInterval(timer);
+    }, []);
 
-    const handleCreate = () => {
-        if (!newChatInput.trim()) return;
-        createChat(newChatType, newChatInput);
-        setNewChatInput('');
+    // Helper per filtrare inviti "scaduti" (Rifiutati da > 2 min)
+    const filterActiveInvites = (invites) => {
+        if (!invites) return [];
+        const now = new Date();
+
+        return invites.filter(inv => {
+            // Se è pending, mostralo sempre
+            if (inv.status === 'pending') return true;
+
+            // Se è rejected, controlla il tempo
+            // Nota: Assumiamo che sent_at sia UTC o gestito localmente.
+            // SQLite da stringhe tipo "2023-11-24 10:00:00".
+            // Aggiungiamo "Z" per trattarlo come UTC se il server usa UTC,
+            // oppure lasciamo così se il browser capisce.
+            // Per sicurezza parsiamo la data.
+            const inviteTime = new Date(inv.sent_at.replace(" ", "T") + "Z"); // Hack per formato SQLite UTC
+            const diffMinutes = (now - inviteTime) / 1000 / 60;
+
+            // Mostra solo se sono passati meno di 2 minuti
+            return diffMinutes < 2;
+        });
     };
 
-    // Helper per gestire il caso in cui invitations fosse undefined all'inizio
     const receivedList = invitations.received || [];
-    const sentList = invitations.sent || [];
+    // Applichiamo il filtro solo alla lista inviati (dove vediamo i rifiutati)
+    const sentList = filterActiveInvites(invitations.sent);
 
     return (
         <div className="invites-container" style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto', display: 'flex', gap: '40px', height: 'calc(100vh - 80px)' }}>
 
-            {/* COLONNA SINISTRA: CREA E SENT */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* COLONNA SINISTRA: INVIATI (SENT) */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <h3 style={{ marginTop: 0, color: '#555', borderBottom: '2px solid #f0f2f5', paddingBottom: '10px' }}>
+                    Richieste Inviate
+                    {sentList.length > 0 && <span style={{ marginLeft: '10px', background: '#eee', padding: '2px 8px', borderRadius: '10px', fontSize: '0.8rem', color: '#333' }}>{sentList.length}</span>}
+                </h3>
 
-                {/* Box Creazione */}
-                <div style={{ background: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-                    <h3 style={{ marginTop: 0, color: '#667eea', borderBottom: '2px solid #f0f2f5', paddingBottom: '10px' }}>Nuova Connessione</h3>
-                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '15px' }}>
-                        Cerca un utente per iniziare una chat privata o crea un nuovo gruppo di lavoro.
-                    </p>
-
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                        <button
-                            className={`mini-btn ${newChatType === 'dm' ? 'active' : ''}`}
-                            onClick={() => setNewChatType('dm')}
-                            style={{ flex: 1, padding: '10px', fontSize: '0.9rem' }}
-                        >
-                            DM Utente
-                        </button>
-                        <button
-                            className={`mini-btn ${newChatType === 'group' ? 'active' : ''}`}
-                            onClick={() => setNewChatType('group')}
-                            style={{ flex: 1, padding: '10px', fontSize: '0.9rem' }}
-                        >
-                            Nuovo Gruppo
-                        </button>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <input
-                            type="text"
-                            className="login-input"
-                            placeholder={newChatType === 'dm' ? "Inserisci username..." : "Nome del gruppo..."}
-                            value={newChatInput}
-                            onChange={e => setNewChatInput(e.target.value)}
-                            style={{ marginBottom: 0, flex: 1 }}
-                        />
-                        <button className="login-button" onClick={handleCreate} style={{ width: 'auto', marginTop: 0, padding: '0 20px' }}>
-                            {newChatType === 'dm' ? 'Invia' : 'Crea'}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Lista Inviati (Feedback Visivo) */}
                 <div style={{ flex: 1, overflowY: 'auto' }}>
-                    <h4 style={{ color: '#555', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        Richieste Inviate
-                        <span style={{ background: '#eee', padding: '2px 8px', borderRadius: '10px', fontSize: '0.8rem' }}>{sentList.length}</span>
-                    </h4>
-
                     {sentList.length === 0 ? (
-                        <div style={{ color: '#999', fontSize: '0.9rem', fontStyle: 'italic' }}>Nessuna richiesta in attesa.</div>
+                        <div style={{ color: '#999', fontSize: '0.9rem', fontStyle: 'italic', padding: '20px', background: '#fff', borderRadius: '8px', textAlign: 'center' }}>
+                            Nessuna richiesta in attesa.
+                        </div>
                     ) : (
                         <div className="sent-list">
                             {sentList.map(inv => (
                                 <div key={inv.id} style={{
-                                    background: '#fff', padding: '12px', borderRadius: '8px', marginBottom: '10px',
+                                    background: '#fff', padding: '15px', borderRadius: '8px', marginBottom: '10px',
                                     borderLeft: inv.status === 'rejected' ? '4px solid #ff4757' : '4px solid #ffa502',
                                     boxShadow: '0 2px 5px rgba(0,0,0,0.03)'
                                 }}>
@@ -92,9 +74,11 @@ function InvitesPage() {
                                         </span>
                                     </div>
                                     <div style={{ fontSize: '0.85rem', color: '#666' }}>
-                                        {inv.group_name}
+                                        Gruppo: <strong>{inv.group_name}</strong>
                                     </div>
-                                    <div style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '5px' }}>{inv.sent_at}</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '5px' }}>
+                                        {inv.status === 'rejected' ? 'Rifiutato recentemente' : `Inviato: ${inv.sent_at}`}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -102,11 +86,11 @@ function InvitesPage() {
                 </div>
             </div>
 
-            {/* COLONNA DESTRA: INVITI RICEVUTI */}
+            {/* COLONNA DESTRA: RICEVUTI (RECEIVED) */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ marginTop: 0, color: '#333', borderBottom: '2px solid #f0f2f5', paddingBottom: '10px', marginBottom: '20px' }}>
                     Inviti Ricevuti
-                    {receivedList.length > 0 && <span style={{ marginLeft: '10px', color: '#667eea' }}>({receivedList.length})</span>}
+                    {receivedList.length > 0 && <span style={{ marginLeft: '10px', color: '#667eea', fontWeight: 'bold' }}>({receivedList.length})</span>}
                 </h3>
 
                 {receivedList.length === 0 ? (
@@ -129,7 +113,7 @@ function InvitesPage() {
                                         <strong style={{ color: '#333', fontSize: '1rem' }}>{inv.partner_username}</strong> ti ha invitato a partecipare:
                                     </div>
                                     <div style={{ fontSize: '1.2rem', color: '#667eea', fontWeight: 'bold' }}>{inv.group_name}</div>
-                                    <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '8px' }}>Inviato il: {inv.sent_at}</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '8px' }}>Ricevuto: {inv.sent_at}</div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '10px' }}>
                                     <button

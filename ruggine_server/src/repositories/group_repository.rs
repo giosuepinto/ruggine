@@ -183,3 +183,31 @@ pub async fn find_member_ids_by_group(
 
     Ok(ids)
 }
+
+/// Cerca se esiste già un gruppo DM attivo tra due utenti.
+pub async fn find_existing_dm_between_users(
+    db: &Pool<Sqlite>,
+    user_id_1: i64,
+    user_id_2: i64,
+) -> Result<Option<i64>, AppError> {
+    // Query un po' complessa: cerchiamo un gruppo che sia DM
+    // e che abbia ESATTAMENTE questi due membri.
+    let result: Option<(i64,)> = sqlx::query_as(
+        r#"
+        SELECT g.id
+        FROM groups g
+        JOIN group_members gm1 ON g.id = gm1.group_id
+        JOIN group_members gm2 ON g.id = gm2.group_id
+        WHERE g.is_dm = TRUE
+          AND gm1.user_id = ?
+          AND gm2.user_id = ?
+        LIMIT 1
+        "#
+    )
+        .bind(user_id_1)
+        .bind(user_id_2)
+        .fetch_optional(db)
+        .await?;
+
+    Ok(result.map(|r| r.0))
+}
