@@ -3,7 +3,7 @@
 mod error;
 mod services;
 mod state;
-mod DTOs;
+mod dtos;
 mod repositories;
 mod controllers;
 mod router;

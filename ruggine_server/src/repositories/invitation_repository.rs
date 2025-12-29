@@ -2,17 +2,20 @@
 
 use sqlx::{FromRow, Pool, Sqlite, Transaction}; // Aggiunto Transaction
 use crate::error::AppError;
-use crate::DTOs::web_socket::InvitationInfo;
+use crate::dtos::web_socket::InvitationInfo;
 
 #[derive(Debug, FromRow)]
 pub struct Invitation {
+    #[allow(dead_code)]
     pub id: i64,
     pub from_user_id: i64,
     pub to_user_id: i64,
     pub group_id: i64,
     pub status: String,
+    #[allow(dead_code)]
     pub created_at: String,
-    pub updated_at: String,
+    #[allow(dead_code)]
+    pub updated_at: String
 }
 
 // =================================================================

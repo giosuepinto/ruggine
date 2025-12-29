@@ -1,13 +1,10 @@
 // src/services/user_service.rs
 use sqlx::SqlitePool;
-use crate::{
-    error::AppError,
-    repositories::user_repository,
-};
+use crate::error::AppError;
 
 use jsonwebtoken::{decode, DecodingKey, Validation};
-use serde::{Deserialize, Serialize};
-use crate::DTOs::authentication::Claims;
+// use serde::{Deserialize, Serialize}; // unused import removed
+use crate::dtos::authentication::Claims;
 
 /// Struct "Sessione" per un utente connesso via WebSocket.
 /// Omette la password_hash.

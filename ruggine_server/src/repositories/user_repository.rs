@@ -1,5 +1,5 @@
 // src/repositories/user_repository.rs
-use sqlx::{Sqlite, Pool, Transaction, FromRow, SqlitePool};
+use sqlx::{Sqlite, Pool, FromRow, SqlitePool};
 use crate::error::AppError;
 
 #[derive(Debug, FromRow)]

@@ -6,7 +6,7 @@ use tracing;
 
 use crate::{
     error::AppError,
-    DTOs::web_socket::{GroupInfo, GroupMember, ServerMessage},
+    dtos::web_socket::{GroupInfo, ServerMessage},
     repositories::{group_repository, message_repository, user_repository, invitation_repository},
     state::{AppState, ConnectionMap},
 };

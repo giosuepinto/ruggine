@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::{
     error::AppError,
     // Importa i DTO per l'autenticazione
-    DTOs::authentication::{AuthPayload, AuthResponse},
+    dtos::authentication::{AuthPayload, AuthResponse},
     // Importa il servizio di autenticazione
     services::auth_service,
     state::AppState,

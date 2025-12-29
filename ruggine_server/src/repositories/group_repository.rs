@@ -1,14 +1,15 @@
 // src/repositories/group_repository.rs
 
-use serde::Serialize;
+// use serde::Serialize; // unused import removed
 use sqlx::{FromRow, Pool, Sqlite, Transaction};
 use crate::error::AppError;
-use crate::DTOs::web_socket::GroupMember;
+use crate::dtos::web_socket::GroupMember;
 
 /// Rappresenta una riga della tabella 'groups' nel database.
 /// Nota: 'id' è incluso perché ci serve quando leggiamo dal DB.
 #[derive(Debug, FromRow)]
 pub struct Group {
+    #[allow(dead_code)]
     pub id: i64,
     pub name: Option<String>,
     pub is_dm: bool,
@@ -66,26 +67,26 @@ pub async fn add_member(
     Ok(())
 }
 
-/// Aggiunge i due membri di un DM in una singola query.
-/// Specifica per la logica di 'CreateDM'.
-pub async fn add_dm_members(
-    tx: &mut Transaction<'_, Sqlite>, // Richiede una transazione attiva
-    group_id: i64,
-    user_id_1: i64,
-    user_id_2: i64,
-) -> Result<(), AppError> {
-    sqlx::query(
-        "INSERT INTO group_members (group_id, user_id) VALUES (?, ?), (?, ?)", //
-    )
-        .bind(group_id)
-        .bind(user_id_1)
-        .bind(group_id)
-        .bind(user_id_2)
-        .execute(&mut **tx)
-        .await?;
+// /// Aggiunge i due membri di un DM in una singola query.
+// /// Specifica per la logica di 'CreateDM'.
+// pub async fn add_dm_members(
+//     tx: &mut Transaction<'_, Sqlite>, // Richiede una transazione attiva
+//     group_id: i64,
+//     user_id_1: i64,
+//     user_id_2: i64,
+// ) -> Result<(), AppError> {
+//     sqlx::query(
+//         "INSERT INTO group_members (group_id, user_id) VALUES (?, ?), (?, ?)", //
+//     )
+//         .bind(group_id)
+//         .bind(user_id_1)
+//         .bind(group_id)
+//         .bind(user_id_2)
+//         .execute(&mut **tx)
+//         .await?;
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 // =================================================================
 // FUNZIONI DI MODIFICA

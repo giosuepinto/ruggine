@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 use crate::{
     error::AppError,
-    DTOs::web_socket::{ClientMessage, ServerMessage},
+    dtos::web_socket::{ClientMessage, ServerMessage},
     services::{chat_service, user_service},
     state::AppState,
 };

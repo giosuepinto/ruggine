@@ -13,14 +13,14 @@ use sqlx::SqlitePool;
 use crate::{
     error::AppError,
     // Importa il DTO per ricevere i dati dal controller
-    DTOs::authentication::AuthPayload,
+    dtos::authentication::AuthPayload,
 };
 
 use jsonwebtoken::{encode, Header, EncodingKey};
-use serde::{Deserialize, Serialize};
+// use serde::{Deserialize, Serialize}; // unused import removed
 use chrono::{Utc, Duration};
-use std::env;
-use crate::DTOs::authentication::Claims;
+// use std::env; // unused import removed
+use crate::dtos::authentication::Claims;
 use crate::repositories::{user_repository, group_repository};
 
 // === FINE NUOVI IMPORT ===
