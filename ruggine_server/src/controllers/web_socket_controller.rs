@@ -1,5 +1,10 @@
-// src/controllers/web_socket_controller.rs
 
+// ============================================================================
+// web_socket_controller.rs - Gestione delle connessioni e messaggi WebSocket lato server
+// Implementa handler Axum per upgrade, ricezione e invio messaggi, gestione utenti connessi
+// ============================================================================
+
+// Import di terze parti
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -13,6 +18,7 @@ use tokio::sync::mpsc;
 use tracing;
 use uuid::Uuid;
 
+// Import interni
 use crate::{
     error::AppError,
     dtos::web_socket::{ClientMessage, ServerMessage},
@@ -20,6 +26,9 @@ use crate::{
     state::AppState,
 };
 
+
+// ================== Handler WebSocket principale ==================
+/// Handler Axum per l'upgrade della connessione HTTP a WebSocket
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
@@ -27,12 +36,16 @@ pub async fn ws_handler(
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
+// ================== Gestione socket WebSocket ==================
+/// Gestisce la comunicazione asincrona su un socket WebSocket
 async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     let (mut sender, mut receiver) = socket.split();
     let socket_id = Uuid::new_v4();
 
+    // Suddivisione dei canali per invio/ricezione messaggi
     let (tx, mut rx) = mpsc::channel::<ServerMessage>(100);
 
+    // Task per inviare messaggi al client
     let mut send_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             let json_msg = match serde_json::to_string(&msg) {
@@ -51,6 +64,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     let mut user_info: Option<user_service::WsUser> = None;
     let state_clone = Arc::clone(&state);
 
+    // Task per ricevere messaggi dal client
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(Message::Text(msg_string))) = receiver.next().await {
             let msg: ClientMessage = match serde_json::from_str(&msg_string) {

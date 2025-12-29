@@ -1,9 +1,16 @@
-// src/services/chat_service.rs
 
+// ============================================================================
+// chat_service.rs - Logica di business per la chat, broadcast e gestione gruppi
+// Funzioni di invio messaggi, broadcast, gestione gruppi e interazione con repository
+// ============================================================================
+
+
+// Import di terze parti
 use sqlx::{Pool, Sqlite, SqlitePool};
 use std::sync::Arc;
 use tracing;
 
+// Import interni
 use crate::{
     error::AppError,
     dtos::web_socket::{GroupInfo, ServerMessage},
@@ -11,10 +18,12 @@ use crate::{
     state::{AppState, ConnectionMap},
 };
 
-// =================================================================
-// FUNZIONI HELPER (Broadcast)
-// =================================================================
 
+// ============================================================================
+// Funzioni helper per broadcast e gestione messaggi
+// ============================================================================
+
+// Invia un messaggio a tutti i membri di un gruppo
 async fn broadcast_to_group_members(
     db: &SqlitePool,
     connections: &ConnectionMap,
@@ -42,6 +51,7 @@ async fn broadcast_to_group_members(
     }
 }
 
+// Invia un messaggio a un singolo utente
 async fn broadcast_message_to_user(
     connections: &ConnectionMap,
     user_id: i64,
@@ -58,7 +68,7 @@ async fn broadcast_message_to_user(
     }
 }
 
-/// Helper per inviare la lista aggiornata degli inviti a un utente
+// Helper per inviare la lista aggiornata degli inviti a un utente
 pub async fn refresh_invitations_for_user(
     state: Arc<AppState>,
     user_id: i64,
@@ -77,6 +87,7 @@ pub async fn refresh_invitations_for_user(
 // FUNZIONI DI LETTURA (Pubbliche)
 // =================================================================
 
+/// Recupera tutti i dati necessari per il client di un utente
 pub async fn get_user_data_for_client(
     db: &Pool<Sqlite>,
     user_id: i64,
@@ -126,6 +137,7 @@ pub async fn get_user_data_for_client(
 // FUNZIONI DI AZIONE (Logica di Business)
 // =================================================================
 
+/// Gestisce l'invio di un messaggio in un gruppo
 pub async fn handle_send_message(
     state: Arc<AppState>,
     sender_user_id: i64,
@@ -162,6 +174,7 @@ pub async fn handle_send_message(
     Ok(())
 }
 
+/// Gestisce la richiesta di creazione di un nuovo gruppo
 pub async fn handle_create_group(
     db: &Pool<Sqlite>,
     creator_user_id: i64,
@@ -176,7 +189,7 @@ pub async fn handle_create_group(
     get_user_data_for_client(db, creator_user_id).await
 }
 
-/// Gestisce la richiesta di creazione DM (invia invito)
+// Gestisce la richiesta di creazione DM (invia invito)
 pub async fn handle_create_dm(
     state: Arc<AppState>,
     creator_user_id: i64,
@@ -194,7 +207,7 @@ pub async fn handle_create_dm(
         return Err(AppError::ValidationError("Non puoi creare un DM con te stesso.".to_string()));
     }
 
-    // --- NUOVO CONTROLLO DUPLICATI ---
+    // --- Controllo Esistenza DM Attivo ---
     if let Some(_) = group_repository::find_existing_dm_between_users(&state.db, creator_user_id, target_user.id).await? {
         return Err(AppError::ValidationError("Esiste già una chat attiva con questo utente.".to_string()));
     }
@@ -233,6 +246,7 @@ pub async fn handle_create_dm(
     Ok(())
 }
 
+/// Gestisce l'invito di un utente a un gruppo
 pub async fn handle_invite_to_group(
     state: Arc<AppState>,
     inviter_username: &str,
@@ -285,6 +299,7 @@ pub async fn handle_invite_to_group(
     Ok(())
 }
 
+/// Gestisce la risposta a un invito (accetta/rifiuta)
 pub async fn handle_invitation_response(
     state: Arc<AppState>,
     user_id: i64,

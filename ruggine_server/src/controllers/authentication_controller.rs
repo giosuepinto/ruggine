@@ -1,17 +1,22 @@
-// src/controllers/auth_controller.rs
+
+// ============================================================================
+// authentication_controller.rs - Gestione delle richieste di autenticazione
+// Controller per registrazione e login utente, interfaccia con auth_service
+// ============================================================================
+
+// Import di terze parti
 use axum::{extract::State, Json};
 use std::sync::Arc;
 
+// Import interni
 use crate::{
     error::AppError,
-    // Importa i DTO per l'autenticazione
     dtos::authentication::{AuthPayload, AuthResponse},
-    // Importa il servizio di autenticazione
     services::auth_service,
     state::AppState,
 };
 
-/// Controller per la registrazione di un nuovo utente.
+// Controller per la registrazione di un nuovo utente
 pub async fn register_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<AuthPayload>,
@@ -26,7 +31,7 @@ pub async fn register_handler(
     }))
 }
 
-/// Controller per il login di un utente.
+// Controller per il login di un utente
 pub async fn login_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<AuthPayload>,

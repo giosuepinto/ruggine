@@ -1,7 +1,17 @@
-// src/repositories/user_repository.rs
+
+// ============================================================================
+// user_repository.rs - Gestione degli utenti nel database
+// Funzioni CRUD per utenti e query correlate
+// ============================================================================
+
+// Import di terze parti
 use sqlx::{Sqlite, Pool, FromRow, SqlitePool};
+
+// Import interni
 use crate::error::AppError;
 
+
+// Struttura che rappresenta un utente nel database
 #[derive(Debug, FromRow)]
 pub struct User {
     pub id: i64,
@@ -9,6 +19,8 @@ pub struct User {
     pub password_hash: String,
 }
 
+
+// Crea un nuovo utente nel database
 pub async fn create_user(
     db: &SqlitePool,
     username: &str,
@@ -22,6 +34,8 @@ pub async fn create_user(
     Ok(())
 }
 
+
+// Trova un utente per username
 pub async fn find_by_username(
     db: &Pool<Sqlite>,
     username: &str

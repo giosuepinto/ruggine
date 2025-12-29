@@ -1,5 +1,11 @@
-// src/services/auth_service.rs
 
+// ============================================================================
+// auth_service.rs - Logica di business per autenticazione e registrazione utenti
+// Funzioni di validazione, hashing, JWT e interazione con repository utenti/gruppi
+// ============================================================================
+
+
+// Import di terze parti
 use argon2::{
     password_hash::{
         rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
@@ -8,29 +14,24 @@ use argon2::{
 };
 use password_hash;
 use sqlx::SqlitePool;
+use jsonwebtoken::{encode, Header, EncodingKey};
+use chrono::{Utc, Duration};
 
-// === NUOVI IMPORT ===
+// Import interni
 use crate::{
     error::AppError,
-    // Importa il DTO per ricevere i dati dal controller
     dtos::authentication::AuthPayload,
+    dtos::authentication::Claims,
+    repositories::{user_repository, group_repository},
 };
 
-use jsonwebtoken::{encode, Header, EncodingKey};
-// use serde::{Deserialize, Serialize}; // unused import removed
-use chrono::{Utc, Duration};
-// use std::env; // unused import removed
-use crate::dtos::authentication::Claims;
-use crate::repositories::{user_repository, group_repository};
-
-// === FINE NUOVI IMPORT ===
 
 
-// =================================================================
-// FUNZIONI DI SERVIZIO (Logica di Business)
-// =================================================================
+// ============================================================================
+// Funzioni di servizio (logica di business)
+// ============================================================================
 
-/// Logica di business per la registrazione di un nuovo utente.
+// Logica di business per la registrazione di un nuovo utente.
 pub async fn register_user(
     db: &SqlitePool,
     payload: AuthPayload
@@ -72,7 +73,7 @@ pub async fn register_user(
     Ok(())
 }
 
-/// Logica di business per il login di un utente.
+// Logica di business per il login di un utente.
 pub async fn login_user(
     db: &SqlitePool,
     payload: AuthPayload

@@ -1,6 +1,14 @@
-// src/repositories/invitation_repository.rs
 
-use sqlx::{FromRow, Pool, Sqlite, Transaction}; // Aggiunto Transaction
+// ============================================================================
+// invitation_repository.rs - Gestione degli inviti tra utenti e gruppi
+// Funzioni CRUD per inviti, transazioni e query correlate
+// ============================================================================
+
+
+// Import di terze parti
+use sqlx::{FromRow, Pool, Sqlite, Transaction};
+
+// Import interni
 use crate::error::AppError;
 use crate::dtos::web_socket::InvitationInfo;
 
@@ -18,11 +26,12 @@ pub struct Invitation {
     pub updated_at: String
 }
 
-// =================================================================
-// SCRITTURA
-// =================================================================
 
-/// Crea un nuovo invito (versione standard).
+// ============================================================================
+// Funzioni di scrittura (creazione/modifica inviti)
+// ============================================================================
+
+// Crea un nuovo invito (versione standard).
 pub async fn create_invitation(
     db: &Pool<Sqlite>,
     from_user_id: i64,
@@ -42,8 +51,7 @@ pub async fn create_invitation(
     Ok(id)
 }
 
-/// Versione transazionale di create_invitation.
-/// Fondamentale per la creazione atomica dei DM (Gruppo + Membro + Invito).
+// Versione transazionale di create_invitation. Fondamentale per la creazione atomica dei DM (Gruppo + Membro + Invito).
 pub async fn create_invitation_tx(
     tx: &mut Transaction<'_, Sqlite>,
     from_user_id: i64,
@@ -63,7 +71,7 @@ pub async fn create_invitation_tx(
     Ok(id)
 }
 
-/// Aggiorna lo stato di un invito (accetta/rifiuta).
+// Aggiorna lo stato di un invito (accetta/rifiuta).
 pub async fn update_status(
     db: &Pool<Sqlite>,
     invitation_id: i64,
@@ -81,7 +89,7 @@ pub async fn update_status(
 // LETTURA
 // =================================================================
 
-/// Inviti RICEVUTI (partner = chi mi ha invitato)
+// Inviti RICEVUTI (partner = chi mi ha invitato)
 pub async fn find_received_invites(
     db: &Pool<Sqlite>,
     user_id: i64,
@@ -109,7 +117,7 @@ pub async fn find_received_invites(
     Ok(invites)
 }
 
-/// Inviti INVIATI (partner = chi ho invitato)
+// Inviti INVIATI (partner = chi ho invitato)
 pub async fn find_sent_invites(
     db: &Pool<Sqlite>,
     user_id: i64,
@@ -138,6 +146,7 @@ pub async fn find_sent_invites(
     Ok(invites)
 }
 
+// Recupera un invito per ID.
 pub async fn find_by_id(
     db: &Pool<Sqlite>,
     invitation_id: i64,
@@ -149,6 +158,7 @@ pub async fn find_by_id(
     Ok(inv)
 }
 
+// Cerca se esiste già un invito DM pendente tra due utenti.
 pub async fn find_pending_dm_invitation(
     db: &Pool<Sqlite>,
     user_a: i64,
@@ -174,6 +184,7 @@ pub async fn find_pending_dm_invitation(
     Ok(inv)
 }
 
+// Verifica se esiste un invito DM rifiutato tra due utenti negli ultimi 2 minuti.
 pub async fn is_in_cooldown_dm(
     db: &Pool<Sqlite>,
     user_a: i64,
@@ -200,6 +211,7 @@ pub async fn is_in_cooldown_dm(
     Ok(count.0 > 0)
 }
 
+// Controlla lo stato di un invito di gruppo tra due utenti.
 pub async fn check_group_invitation_status(
     db: &Pool<Sqlite>,
     from_user: i64,

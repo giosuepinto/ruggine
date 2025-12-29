@@ -1,11 +1,20 @@
-// src/DTOs/web_socket.rs
 
+// ============================================================================
+// web_socket.rs - Data Transfer Objects (DTO) per WebSocket
+// Enum e strutture per messaggi client-server e server-client
+// ============================================================================
+
+
+// Import di terze parti
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-// === DAL CLIENT AL SERVER ===
 
-/// Enum per tutti i messaggi WebSocket inviati DAL CLIENT.
+// ============================================================================
+// Messaggi dal client al server
+// ============================================================================
+
+// Enum per tutti i messaggi WebSocket inviati DAL CLIENT
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ClientMessage {
@@ -34,9 +43,12 @@ pub enum ClientMessage {
     },
 }
 
-// === DAL SERVER AL CLIENT ===
 
-// Enum per tutti i messaggi WebSocket inviati DAL SERVER.
+// ============================================================================
+// Messaggi dal server al client
+// ============================================================================
+
+// Enum per tutti i messaggi WebSocket inviati DAL SERVER
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum ServerMessage {
@@ -63,7 +75,7 @@ pub enum ServerMessage {
 
 // === DTOs (DATA TRANSFER OBJECTS) ===
 
-/// DTO che rappresenta una singola chat (gruppo o DM) per il client.
+// DTO che rappresenta una singola chat (gruppo o DM) per il client.
 #[derive(Serialize, Debug, Clone)]
 pub struct GroupInfo {
     pub group_id: i64,
@@ -73,14 +85,14 @@ pub struct GroupInfo {
     pub messages: Vec<ServerMessage>, // Cronologia
 }
 
-/// DTO che rappresenta un utente all'interno di un `GroupInfo`.
+// DTO che rappresenta un utente all'interno di un `GroupInfo`.
 #[derive(Serialize, Debug, Clone, FromRow)]
 pub struct GroupMember {
     pub id: i64,
     pub username: String,
 }
 
-/// DTO per le informazioni di un invito.
+// DTO per le informazioni di un invito.
 #[derive(Serialize, Debug, Clone, FromRow)]
 pub struct InvitationInfo {
     pub id: i64,

@@ -1,16 +1,22 @@
-// src/state.rs
 
+// ============================================================================
+// state.rs - Stato globale condiviso per il backend Ruggine
+// Definisce la struttura AppState e le mappe di connessione WebSocket
+// ============================================================================
+
+// Import di terze parti
 use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
-use uuid::Uuid; // Importa Uuid
+use uuid::Uuid;
 
-// Importa i nostri modelli
+// Import interni
 use crate::dtos::web_socket::ServerMessage;
 
-// NUOVO ALIAS:
-// Mappa: user_id -> (Mappa: socket_id -> Canale di invio)
+// ============================================================================
+// Alias e strutture per la gestione delle connessioni
+// ============================================================================
 pub type ConnectionMap = Arc<RwLock<HashMap<i64, HashMap<Uuid, mpsc::Sender<ServerMessage>>>>>;
 
 pub struct AppState {

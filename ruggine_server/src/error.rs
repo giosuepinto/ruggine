@@ -1,14 +1,23 @@
+
+// ============================================================================
+// error.rs - Gestione centralizzata degli errori custom per il backend Ruggine
+// Definisce l'enum AppError e le conversioni/risposte per errori comuni (DB, hashing, validazione)
+// ============================================================================
+
+// Import standard e di terze parti
 use std::fmt;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
-use password_hash; // Importa la cassa
-use serde_json; // Per il JSON nell'errore
-use sqlx; // Per sqlx::Error
+use password_hash;
+use serde_json;
+use sqlx;
 
-// Rendi 'pub' l'enum
+// ============================================================================
+// Enum e trait per la gestione degli errori applicativi
+// ============================================================================
 #[derive(Debug)]
 pub enum AppError {
     SqlxError(sqlx::Error),
@@ -16,8 +25,7 @@ pub enum AppError {
     ValidationError(String),
 }
 
-// --- 3. AGGIUNGI L'IMPLEMENTAZIONE PER 'Display' (per {}) ---
-// Questo risolve il tuo errore di compilazione.
+// Implementazione del trait Display per AppError
 impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let error_message = match self {
@@ -29,7 +37,7 @@ impl fmt::Display for AppError {
     }
 }
 
-// Rendi 'pub' l'implementazione
+// Conversione AppError in risposta HTTP per Axum
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
@@ -51,7 +59,7 @@ impl IntoResponse for AppError {
     }
 }
 
-// Rendi 'pub' le conversioni
+// Conversioni automatiche da errori esterni a AppError
 impl From<sqlx::Error> for AppError {
     fn from(e: sqlx::Error) -> Self {
         AppError::SqlxError(e)

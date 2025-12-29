@@ -1,21 +1,25 @@
-// src/services/user_service.rs
-use sqlx::SqlitePool;
-use crate::error::AppError;
 
+// ============================================================================
+// user_service.rs - Gestione utenti connessi via WebSocket e autenticazione JWT
+// Strutture e funzioni per sessione utente e validazione token
+// ============================================================================
+
+// Import di terze parti
+use sqlx::SqlitePool;
 use jsonwebtoken::{decode, DecodingKey, Validation};
-// use serde::{Deserialize, Serialize}; // unused import removed
+
+// Import interni
+use crate::error::AppError;
 use crate::dtos::authentication::Claims;
 
-/// Struct "Sessione" per un utente connesso via WebSocket.
-/// Omette la password_hash.
+// Struct "Sessione" per un utente connesso via WebSocket (senza password_hash)
 #[derive(Debug, Clone)]
 pub struct WsUser {
     pub id: i64,
     pub username: String,
 }
 
-/// Autentica un utente tramite il suo token (username)
-/// e restituisce i suoi dati di sessione.
+// Autentica un utente tramite il suo token (username) e restituisce i suoi dati di sessione
 pub async fn authenticate_ws_user(
     _db: &SqlitePool, // Non ci serve più il DB per validare il token!
     token: &str

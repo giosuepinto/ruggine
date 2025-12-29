@@ -1,23 +1,29 @@
-// src/repositories/message_repository.rs
 
+// ============================================================================
+// message_repository.rs - Gestione dei messaggi di chat nel database
+// Funzioni per salvataggio, recupero e formattazione messaggi
+// ============================================================================
+
+
+// Import di terze parti
 use sqlx::{FromRow, Pool, Sqlite};
+
+// Import interni
 use crate::error::AppError;
 
-/// Rappresenta i dati di un messaggio di chat recuperati dal DB,
-/// già formattati per essere inviati al client.
-/// (Simile a `ServerMessage::GroupChat`)
+// Rappresenta i dati di un messaggio di chat recuperati dal DB, già formattati per il client
 #[derive(Debug, FromRow)]
 pub struct ChatMessage {
     pub from_username: String,
     pub content: String,
 }
 
-// =================================================================
-// FUNZIONI DI SCRITTURA
-// =================================================================
 
-/// Salva un singolo messaggio di chat nel database.
-/// Questa è un'operazione atomica, quindi può prendere il Pool.
+// ============================================================================
+// Funzioni di scrittura (creazione messaggi)
+// ============================================================================
+
+// Salva un singolo messaggio di chat nel database (operazione atomica)
 pub async fn create_message(
     db: &Pool<Sqlite>,
     group_id: i64,
@@ -38,12 +44,12 @@ pub async fn create_message(
     Ok(())
 }
 
-// =================================================================
-// FUNZIONI DI LETTURA
-// =================================================================
 
-/// Recupera gli ultimi 50 messaggi per un dato gruppo.
-/// Questo implementa il requisito "Cronologia Messaggi".
+// ============================================================================
+// Funzioni di lettura (recupero messaggi)
+// ============================================================================
+
+// Recupera gli ultimi 50 messaggi per un dato gruppo (cronologia)
 pub async fn get_history_for_group(
     db: &Pool<Sqlite>,
     group_id: i64,
