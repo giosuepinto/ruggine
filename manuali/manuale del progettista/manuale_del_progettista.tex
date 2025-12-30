@@ -1,9 +1,38 @@
 % Manuale del Progettista - Progetto Ruggine
 \documentclass[a4paper,12pt]{book}
+
 \usepackage[utf8]{inputenc}
 \usepackage[italian]{babel}
 \usepackage{hyperref}
 \usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Configurazione per il codice Rust
+\lstdefinelanguage{Rust}{
+    morekeywords={async,await,fn,pub,struct,enum,impl,let,mut,match,if,else,for,while,loop,in,move,ref,return,Self,self,mod,use,crate,super,where,const,static,trait,type,as,dyn,unsafe,extern,macro_rules,box,continue,break,yield,default,union},
+    sensitive=true,
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+}
+
+\lstset{
+    language=Rust,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{red}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{orange},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=5pt,
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    tabsize=4,
+    captionpos=b
+}
 
 \title{Manuale del Progettista}
 \author{Gruppo 50}
@@ -30,28 +59,11 @@
 \tableofcontents
 
 \mainmatter
-\chapter{Introduzione}
-Questo manuale descrive l'architettura, la logica e le modalità di sviluppo del progetto Ruggine.
-
-\chapter{Panoramica dell'architettura}
-\section{Struttura delle cartelle}
-\section{Componenti principali (backend Rust, frontend React)}
-\section{Flusso dati generale}
-
-\chapter{Descrizione dei file principali}
-\section{File Rust (main.rs, router.rs, ecc.)}
-\section{Cartelle (controllers, services, repositories, dtos)}
-
-\chapter{Descrizione delle funzioni}
-Per ogni file, elenco e spiegazione delle funzioni principali e del loro ruolo.
-
-\chapter{Flusso dei dati e logica applicativa}
-\section{Autenticazione}
-\section{Gestione messaggi e gruppi}
-\section{Gestione inviti e notifiche}
-
-\chapter{Estendibilità e personalizzazione}
-\section{Aggiungere nuove funzionalità}
-\section{Best practice per modifiche future}
+\input{chapters/introduzione.tex}
+\input{chapters/architettura.tex}
+\input{chapters/file_principali.tex}
+\input{chapters/funzioni.tex}
+\input{chapters/flusso_logica.tex}
+\input{chapters/estendibilita.tex}
 
 \end{document}

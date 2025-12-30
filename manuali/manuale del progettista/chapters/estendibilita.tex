@@ -1,0 +1,19 @@
+\chapter{Estendibilità e personalizzazione}
+
+Questa sezione fornisce indicazioni su come estendere e personalizzare il backend Ruggine.
+
+\section{Aggiungere nuove funzionalità}
+Per aggiungere una nuova funzionalità:
+
+1. Definire i nuovi DTOs necessari in src/DTOs/.
+2. Implementare le funzioni di business nei service (src/services/).
+3. Aggiungere le query o operazioni nei repository (src/repositories/).
+4. Creare o aggiornare i controller per esporre le nuove API.
+5. Aggiornare le rotte in router.rs.
+
+\section{Best practice per modifiche future}
+- Mantenere separazione tra controller, service e repository.
+- Documentare ogni funzione e file.
+- Scrivere test per ogni nuova funzionalità.
+- Usare il pattern DTO per la comunicazione tra livelli.
+- Gestire gli errori in modo centralizzato tramite error.rs.

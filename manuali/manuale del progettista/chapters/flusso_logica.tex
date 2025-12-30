@@ -1,0 +1,20 @@
+\chapter{Flusso dei dati e logica applicativa}
+
+Questa sezione descrive in dettaglio i principali flussi di dati e la logica applicativa del backend.
+
+\section{Autenticazione}
+Il processo di autenticazione inizia con la ricezione delle credenziali tramite una richiesta HTTP POST. Il controller di autenticazione valida i dati e invoca la funzione di servizio per la verifica delle credenziali. Se la verifica ha successo, viene restituito un token di sessione.
+
+\begin{lstlisting}[language=Rust, caption={Flusso autenticazione}]
+// Handler nel controller
+pub async fn login_handler(Json(payload): Json<LoginDTO>, State(state): State<AppState>) -> Result<Json<UserDTO>, AppError> {
+    let user = auth_service::authenticate_user(&state.db, &payload.username, &payload.password).await?;
+    Ok(Json(UserDTO::from(user)))
+}
+\end{lstlisting}
+
+\section{Gestione messaggi e gruppi}
+La gestione dei messaggi avviene tramite WebSocket. I controller ricevono i messaggi, li validano e li inoltrano ai servizi, che li salvano tramite i repository e li distribuiscono ai destinatari.
+
+\section{Gestione inviti e notifiche}
+Gli inviti vengono gestiti tramite endpoint dedicati. Il controller riceve la richiesta, il service applica la logica di invito e il repository aggiorna il database. Le notifiche vengono inviate tramite WebSocket agli utenti interessati.
