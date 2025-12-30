@@ -1,12 +1,39 @@
 % Manuale del Progettista - Progetto Ruggine
 \documentclass[a4paper,12pt]{book}
 
-\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage[italian]{babel}
 \usepackage{hyperref}
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{xcolor}
+
+% Configurazione per il codice JavaScript
+\lstdefinelanguage{JavaScript}{
+    morekeywords={await,async,function,return,if,else,for,while,let,const,var,import,from,export,default,class,extends,constructor,super,this,new,try,catch,finally,throw,typeof,instanceof,in,of,break,continue,switch,case,static,get,set},
+    sensitive=true,
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+    morestring=[b]'
+}
+
+\lstset{
+    language=JavaScript,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{orange},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=5pt,
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    tabsize=4,
+    captionpos=b
+}
 
 % Configurazione per il codice Rust
 \lstdefinelanguage{Rust}{
@@ -60,10 +87,10 @@
 
 \mainmatter
 \input{chapters/introduzione.tex}
-\input{chapters/architettura.tex}
-\input{chapters/file_principali.tex}
-\input{chapters/funzioni.tex}
-\input{chapters/flusso_logica.tex}
-\input{chapters/estendibilita.tex}
+\input{chapters/requisiti.tex}
+\input{chapters/frontend.tex}
+\input{chapters/backend.tex}
+\input{chapters/database.tex}
+\input{chapters/proposte_future.tex}
 
 \end{document}

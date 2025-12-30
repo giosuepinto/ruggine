@@ -1,2 +1,16 @@
 \chapter{Introduzione}
-Questo manuale descrive in modo dettagliato l'architettura, la logica, le scelte progettuali e le modalità di sviluppo del progetto Ruggine. Ogni componente, file e funzione del backend (ruggine\_server) viene documentato con esempi di codice e spiegazioni puntuali, per facilitare la comprensione, la manutenzione e l'estendibilità del sistema.
+Il progetto Ruggine adotta un'architettura a 3 tier (livelli), una delle soluzioni più diffuse e robuste per la realizzazione di applicazioni moderne, scalabili e manutenibili. I tre livelli sono:
+
+Il progetto Ruggine adotta un'architettura a 3 tier (livelli), una delle soluzioni più diffuse e robuste per la realizzazione di applicazioni moderne, scalabili e manutenibili. I tre livelli sono frontend, backend e database.
+
+Il \textbf{frontend} è responsabile dell'interfaccia utente e dell'interazione con l'utente finale. È realizzato con React (JavaScript/JSX), gestito tramite Vite per il build e lo sviluppo locale. Sono utilizzate librerie come react-router-dom per la navigazione, axios per le chiamate HTTP, e la WebSocket API nativa per la comunicazione in tempo reale. Lo stile è gestito con CSS e moduli come App.css.
+
+Il \textbf{backend} gestisce la logica applicativa, la sicurezza e l'orchestrazione delle operazioni. È sviluppato in Rust, con il framework Axum per la gestione delle richieste HTTP e WebSocket. Utilizza SQLx per l'accesso asincrono al database, Tokio per la concorrenza e la gestione degli eventi, Serde per la serializzazione/deserializzazione dei dati, e Tracing per il logging strutturato. La sicurezza è garantita tramite Argon2 per l'hashing delle password e jsonwebtoken per la generazione dei token JWT.
+
+Il \textbf{database} si occupa della persistenza e della gestione dei dati. In fase di sviluppo viene utilizzato SQLite per semplicità e portabilità, mentre la struttura è compatibile con PostgreSQL per ambienti di produzione. Le migrazioni sono gestite tramite script SQL versionati. Le query sono parametrizzate e sicure contro SQL injection.
+
+Inoltre, per lo sviluppo e la gestione del progetto vengono utilizzati diversi tool: Git per il versionamento del codice e la collaborazione, Visual Studio Code come editor principale (con estensioni per Rust, React e LaTeX), Cargo come gestore di pacchetti e build system per Rust, npm come gestore di pacchetti per il frontend React, e Docker (opzionale) per la containerizzazione e il deploy multi-piattaforma.
+
+Inoltre l'utilizzo di Git e GitHub per il versionamento del codice e la collaborazione tra sviluppatori è parte integrante del flusso di lavoro del progetto.
+
+Questa separazione consente di isolare le responsabilità, facilitare l'estensione e la manutenzione del sistema, e garantire una maggiore sicurezza e scalabilità. Nel manuale verranno analizzati in dettaglio ciascuno di questi livelli, illustrando le scelte progettuali, le tecnologie adottate e le possibili evoluzioni future.

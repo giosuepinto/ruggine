@@ -1,0 +1,14 @@
+\chapter{Proposte di migliorie e feature future}
+
+Questa sezione presenta proposte concrete per l'evoluzione di Ruggine, motivate da esigenze di scalabilità, robustezza e competitività.
+
+
+\section{Migliorie architetturali}
+Tra le principali proposte architetturali vi è l'adozione di microservizi, ad esempio separando autenticazione, chat e notifiche in servizi distinti. Questo permette di aggiornare la chat senza toccare l'autenticazione, o di scalare solo il servizio più usato: un picco di traffico nella chat non rallenta il login degli utenti. La containerizzazione con Docker consente di avviare ogni servizio (backend, frontend, database) in un container isolato; lo sviluppatore può lanciare l'intero sistema con un solo comando (docker-compose up) senza preoccuparsi delle dipendenze locali. Infine, l'integrazione di CI/CD permette di automatizzare test, build e deploy: ogni modifica al backend viene testata e, se supera i test, viene automaticamente deployata in staging.
+
+
+\section{Nuove feature}
+Tra le nuove feature proposte vi sono le notifiche push, che permettono a un utente di ricevere una notifica sul telefono quando viene invitato in un gruppo o riceve un nuovo messaggio (implementazione possibile tramite Firebase Cloud Messaging). Il supporto mobile può essere realizzato tramite una Progressive Web App, che consente l'uso offline e l'installazione su smartphone senza passare dagli store, oppure tramite app native che sfruttano notifiche e funzionalità avanzate del dispositivo. La gestione avanzata dei gruppi prevede l'aggiunta di ruoli (admin, moderatore, membro), permessi granulari (ad esempio solo l'admin può invitare) e strumenti di moderazione (ban, silenzia) per comunità più grandi e sicure. L'integrazione con servizi esterni può includere il login tramite Google (OAuth), il salvataggio file su cloud (ad esempio Google Drive) e la raccolta di statistiche di utilizzo tramite Google Analytics.
+
+\section{Impatto e motivazioni}
+Queste proposte mirano a rendere il sistema più resiliente, scalabile e competitivo. L'adozione di microservizi e containerizzazione facilita la crescita e la manutenzione. Le nuove feature rispondono a esigenze reali degli utenti, migliorando l'esperienza e l'adozione della piattaforma. L'integrazione di CI/CD e strumenti di monitoraggio aumenta la qualità, la sicurezza e la velocità di sviluppo, riducendo i rischi di regressioni.
