@@ -4,8 +4,8 @@
 body {
   margin: 0;
   font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  background-color: #f0f2f5;
-  color: #1c1e21;
+  background-color: #f7efe6; /* beige chiaro, neutro arrugginito */
+  color: #4b2e19; /* marrone scuro */
   overflow: hidden; /* Impedisce lo scroll della pagina intera */
 }
 
@@ -15,7 +15,7 @@ body {
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #b34716 0%, #a63c06 100%); /* arancione ruggine -> marrone ruggine */
 }
 .login-card {
   background: white;
@@ -26,20 +26,20 @@ body {
   max-width: 400px;
   text-align: center;
 }
-.login-title { margin-bottom: 1.5rem; color: #333; }
+.login-title { margin-bottom: 1.5rem; color: #a63c06; }
 .login-input {
   width: 100%; padding: 12px; margin-bottom: 15px;
   border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box;
 }
 .login-button {
-  width: 100%; padding: 12px; background-color: #667eea; color: white;
+  width: 100%; padding: 12px; background-color: #b34716; color: white;
   border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
 }
-.login-button:hover { background-color: #5a6fd6; }
+.login-button:hover { background-color: #a63c06; }
 .secondary-action { margin-top: 20px; font-size: 14px; color: #666; }
-.link-button { background: none; border: none; color: #764ba2; font-weight: bold; cursor: pointer; text-decoration: underline; }
-.error-message { margin-top: 15px; padding: 10px; background-color: #ffebee; color: #c62828; border-radius: 6px; border: 1px solid #ef9a9a; }
-.success-message { margin-top: 15px; padding: 10px; background-color: #e8f5e9; color: #2e7d32; border-radius: 6px; border: 1px solid #a5d6a7; }
+.link-button { background: none; border: none; color: #b34716; font-weight: bold; cursor: pointer; text-decoration: underline; }
+.error-message { margin-top: 15px; padding: 10px; background-color: #ffe5e0; color: #a63c06; border-radius: 6px; border: 1px solid #e57373; }
+.success-message { margin-top: 15px; padding: 10px; background-color: #fff3e0; color: #b34716; border-radius: 6px; border: 1px solid #ffb74d; }
 
 
 /* --- LAYOUT CHAT --- */
@@ -47,13 +47,13 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #fff;
+  background-color: #f7efe6;
 }
 
 /* --- NAVBAR --- */
 .navbar {
   height: 60px;
-  background-color: #667eea; /* Colore primario */
+  background-color: #a63c06; /* Colore primario arrugginito */
   color: white;
   display: flex;
   align-items: center;
@@ -96,8 +96,8 @@ body {
 .new-chat-controls { display: flex; gap: 5px; margin-top: 10px; }
 .new-chat-input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 20px; padding-left: 15px; outline: none; }
 .mini-btn { padding: 5px 10px; border: none; border-radius: 15px; background: #e0e0e0; cursor: pointer; font-size: 0.8rem; }
-.mini-btn.active { background: #667eea; color: white; }
-.create-btn { background: #667eea; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; }
+.mini-btn.active { background: #b34716; color: white; }
+.create-btn { background: #b34716; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; }
 
 .chat-list { flex: 1; overflow-y: auto; }
 .chat-item {
@@ -105,7 +105,7 @@ body {
   display: flex; align-items: center; gap: 10px;
 }
 .chat-item:hover { background-color: #f9f9f9; }
-.chat-item.active { background-color: #eef2ff; border-left: 4px solid #667eea; }
+.chat-item.active { background-color: #ffe5e0; border-left: 4px solid #b34716; }
 
 .avatar {
   width: 45px; height: 45px; background-color: #ddd; border-radius: 50%;
@@ -118,7 +118,13 @@ body {
 .chat-preview-author { font-weight: 600; color: #555; }
 
 /* --- CHAT AREA --- */
-.chat-window { flex: 1; display: flex; flex-direction: column; background-color: #efe7dd; /* Stile WhatsApp */ background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png"); /* Pattern */ }
+.chat-window {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #efe7dd;
+  background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
+}
 .empty-state { flex: 1; display: flex; justify-content: center; align-items: center; color: #888; background: #f0f2f5; flex-direction: column; }
 
 .chat-header {
@@ -137,7 +143,7 @@ body {
 .message.received { align-self: flex-start; background-color: white; border-top-left-radius: 0; }
 .msg-author { font-size: 0.75rem; font-weight: bold; margin-bottom: 2px; display: block; }
 .sent .msg-author { display: none; /* Nascondi il mio nome nei miei messaggi */ }
-.received .msg-author { color: #e542a3; } /* Colore casuale per altri */
+.received .msg-author { color: #b34716; } /* Colore ruggine per altri */
 
 /* Input Area */
 .input-area {
@@ -147,7 +153,7 @@ body {
   flex: 1; padding: 12px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; font-size: 1rem;
 }
 .send-btn {
-  background-color: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: bold;
+  background-color: #b34716; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: bold;
 }
 .send-btn:disabled { background-color: #ccc; cursor: not-allowed; }
 
@@ -162,7 +168,7 @@ body {
 }
 
 .add-chat-btn {
-  background-color: #667eea;
+  background-color: #b34716;
   color: white;
   border: none;
   width: 32px;
@@ -176,7 +182,7 @@ body {
   transition: background 0.2s;
   box-shadow: 0 2px 5px rgba(0,0,0,0.15);
 }
-.add-chat-btn:hover { background-color: #5a6fd6; transform: scale(1.05); }
+.add-chat-btn:hover { background-color: #a63c06; transform: scale(1.05); }
 
 /* --- MODALE (Popup) --- */
 .modal-overlay {
@@ -215,7 +221,7 @@ body {
   flex: 1; padding: 10px; border: none; background: #f0f0f0; border-radius: 8px;
   cursor: pointer; font-weight: bold; color: #666; transition: 0.2s;
 }
-.modal-tab.active { background: #667eea; color: white; }
+.modal-tab.active { background: #b34716; color: white; }
 
 /* --- TOAST (Notifica a scomparsa) --- */
 .toast-container {
@@ -242,8 +248,8 @@ body {
   gap: 10px;
 }
 
-.toast.success { background-color: #2ecc71; }
-.toast.error { background-color: #ff4757; }
+.toast.success { background-color: #b34716; }
+.toast.error { background-color: #a63c06; }
 
 @keyframes fadeInOut {
   0% { opacity: 0; transform: translateY(20px); }

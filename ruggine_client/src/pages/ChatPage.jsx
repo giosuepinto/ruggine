@@ -28,7 +28,7 @@ const formatMembersList = (members) => {
 };
 
 function ChatPage() {
-    const { user, groups, messages, sendMessage, sendInvite, createChat } = useWebSocket();
+    const { user, groups, messages, sendMessage, sendInvite, createChat, wsError, setWsError } = useWebSocket();
 
     const [activeGroupId, setActiveGroupId] = useState(null);
     const [input, setInput] = useState('');
@@ -62,6 +62,14 @@ function ChatPage() {
             return () => clearTimeout(timer);
         }
     }, [toast]);
+
+    // Mostra toast di errore WebSocket
+    useEffect(() => {
+        if (wsError) {
+            setToast({ msg: wsError, type: 'error' });
+            setWsError(null);
+        }
+    }, [wsError, setWsError]);
 
     const activeGroup = groups.find(g => g.group_id === activeGroupId);
     const activeMessages = messages[activeGroupId] || [];
@@ -164,7 +172,13 @@ function ChatPage() {
                                 className={`chat-item ${activeGroupId === group.group_id ? 'active' : ''}`}
                                 onClick={() => setActiveGroupId(group.group_id)}
                             >
-                                <div className="avatar" style={group.group_id === 1 ? {backgroundColor: '#ffd700', color: 'black'} : {}}>{getAvatarInitial(name)}</div>
+                                <div className="avatar" style={group.group_id === 1 ? {background: 'none', color: 'inherit', padding: 0, position: 'relative', overflow: 'visible'} : {}}>
+                                    {group.group_id === 1 ? (
+                                        <img src="/ruggine_logo.png" alt="Ruggine Logo" style={{ width: 60, height: 60, objectFit: 'contain', borderRadius: '50%', display: 'block', margin: '0 auto' }} />
+                                    ) : (
+                                        getAvatarInitial(name)
+                                    )}
+                                </div>
                                 <div className="chat-info">
                                     <div className="chat-name">{name}</div>
                                     <div className="chat-preview">{getLastMessagePreview(group.group_id)}</div>

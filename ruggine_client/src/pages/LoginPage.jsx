@@ -32,16 +32,10 @@ function LoginPage() {
             const data = await response.json();
 
             if (response.ok) {
-                setMessage(data.message);
                 if (isLoginMode) {
-                    // === MODIFICATO PER SESSION STORAGE ===
-                    // Se usiamo il context login:
-                    // login(username, data.message);
-                    // navigate('/chat');
-
-                    // SE invece usiamo il refresh forzato (scelta consigliata per pulizia totale):
                     sessionStorage.setItem('username', username);
                     sessionStorage.setItem('token', data.message);
+                    setMessage('Login effettuato!');
                     window.location.href = '/chat'; // Forza reload pulito
                 } else {
                     setIsLoginMode(true);

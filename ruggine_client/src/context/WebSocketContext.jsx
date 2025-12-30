@@ -14,6 +14,7 @@ export const WebSocketProvider = ({ children }) => {
     const [invitations, setInvitations] = useState({ received: [], sent: [] });
     const [messages, setMessages] = useState({});
     const [user, setUser] = useState(null);
+    const [wsError, setWsError] = useState(null);
 
     // Login al montaggio (per gestire il refresh della pagina)
     useEffect(() => {
@@ -86,7 +87,7 @@ export const WebSocketProvider = ({ children }) => {
                 if (msg.content.includes("Token") || msg.content.includes("autenticarti")) {
                     logout();
                 } else {
-                    alert("Server Error: " + msg.content);
+                    setWsError(msg.content);
                 }
                 break;
             default:
@@ -147,7 +148,9 @@ export const WebSocketProvider = ({ children }) => {
         sendMessage,
         createChat,
         sendInvite,
-        respondToInvite
+        respondToInvite,
+        wsError,
+        setWsError
     };
 
     return (
