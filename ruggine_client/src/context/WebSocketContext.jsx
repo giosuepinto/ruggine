@@ -1,14 +1,26 @@
-// src/context/WebSocketContext.jsx
+
+// ============================================================================
+// WebSocketContext.jsx - Context globale WebSocket
+// Gestisce connessione, autenticazione, gruppi, inviti e messaggi.
+// Fornisce API globale per chat e inviti.
+// ============================================================================
+
+// ================== Import base React ==================
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+
+// ================== Import router ==================
 import { useNavigate } from 'react-router-dom';
 
+// ================== Creazione Context ==================
 const WebSocketContext = createContext(null);
 
+// ================== Provider principale ==================
 export const WebSocketProvider = ({ children }) => {
+    // --- Riferimento WebSocket e navigazione ---
     const socket = useRef(null);
     const navigate = useNavigate();
 
-    // Stati Globali
+    // --- Stati globali condivisi ---
     const [isConnected, setIsConnected] = useState(false);
     const [groups, setGroups] = useState([]);
     const [invitations, setInvitations] = useState({ received: [], sent: [] });
@@ -16,7 +28,7 @@ export const WebSocketProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [wsError, setWsError] = useState(null);
 
-    // Login al montaggio (per gestire il refresh della pagina)
+    // --- Effetto di login automatico al mount ---
     useEffect(() => {
         // MODIFICATO: Usa sessionStorage
         const token = sessionStorage.getItem('token');
@@ -28,6 +40,8 @@ export const WebSocketProvider = ({ children }) => {
         }
     }, []);
 
+
+    // ================== Gestione connessione WebSocket ==================
     const connect = (token) => {
         if (socket.current) return;
 
@@ -52,6 +66,8 @@ export const WebSocketProvider = ({ children }) => {
         };
     };
 
+
+    // ================== Gestione messaggi WebSocket ==================
     const handleMessage = (msg) => {
         switch (msg.type) {
             case 'update_group_list':
@@ -95,7 +111,8 @@ export const WebSocketProvider = ({ children }) => {
         }
     };
 
-    // --- FUNZIONE LOGIN AGGIORNATA ---
+
+    // ================== API di autenticazione ==================
     const login = (username, token) => {
         // MODIFICATO: Usa sessionStorage
         sessionStorage.setItem('username', username);
@@ -104,7 +121,6 @@ export const WebSocketProvider = ({ children }) => {
         connect(token);
     };
 
-    // --- FUNZIONE LOGOUT AGGIORNATA ---
     const logout = () => {
         if (socket.current) socket.current.close();
         // MODIFICATO: Pulisce solo la sessione corrente
@@ -118,7 +134,7 @@ export const WebSocketProvider = ({ children }) => {
         navigate('/');
     };
 
-    // --- AZIONI (Invariate) ---
+    // ================== API di azione chat/inviti ==================
     const sendMessage = (groupId, content) => {
         if (socket.current) {
             socket.current.send(JSON.stringify({ type: "send_group_message", group_id: groupId, content }));
@@ -136,6 +152,8 @@ export const WebSocketProvider = ({ children }) => {
         socket.current?.send(JSON.stringify({ type: "handle_invitation", invitation_id: invitationId, accept }));
     };
 
+
+    // ================== Valore esposto dal context ==================
     const value = {
         user,
         isConnected,
@@ -160,4 +178,5 @@ export const WebSocketProvider = ({ children }) => {
     );
 };
 
+// ================== Hook custom per usare il context ==================
 export const useWebSocket = () => useContext(WebSocketContext);
