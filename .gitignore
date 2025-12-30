@@ -1,70 +1,55 @@
+
 # ===================================================================
 # File .gitignore per il Progetto Ruggine (Rust + React)
 # ===================================================================
 
-# ---------------------------------
-# Backend RUST (ruggine_server)
-# ---------------------------------
-
-# La cartella 'target' contiene tutti i file compilati,
-# gli eseguibili e le dipendenze. È la più importante da ignorare.
+# --------------------------------------------------
+# 1. Backend RUST (ruggine_server)
+# --------------------------------------------------
 /ruggine_server/target/
-
-# Il file del database SQLite. Non vogliamo committare i dati.
 /ruggine_server/ruggine.db
 /ruggine_server/ruggine.db-journal
 /ruggine_server/ruggine.db-wal
-
-# [cite_start]I file di log che genereremo per le prestazioni della CPU [cite: 8]
 /ruggine_server/*.log
 
-# ---------------------------------
-# Frontend REACT (ruggine_client)
-# ---------------------------------
-
-# La cartella 'node_modules' contiene migliaia di dipendenze
-# e non va *mai* committata.
+# --------------------------------------------------
+# 2. Frontend REACT (ruggine_client)
+# --------------------------------------------------
 /ruggine_client/node_modules/
-
-# I file di build di produzione (generati da Vite)
+/ruggine_client/package-lock.json
 /ruggine_client/dist/
-
-# Cache interna di Vite
 /ruggine_client/.vite/
-
-# File di log e cache di npm/yarn
+/ruggine_client/bootstrap/
+/ruggine_client/react-bootstrap/
 /ruggine_client/.npm/
 /ruggine_client/npm-debug.log*
 /ruggine_client/yarn-debug.log*
 /ruggine_client/yarn-error.log*
 /ruggine_client/pnpm-debug.log*
+/ruggine_client/*.tmp
+/ruggine_client/*.temp
+/ruggine_client/.vscode/
+/ruggine_client/.idea/
+/ruggine_client/.DS_Store
 
-# ---------------------------------
-# File di Sistema e IDE
-# ---------------------------------
+# --------------------------------------------------
+# 3. Manuali LaTeX (manuali)
+# --------------------------------------------------
+manuali/**/build/
 
-# macOS
+# --------------------------------------------------
+# File di Sistema e IDE (globali)
+# --------------------------------------------------
 .DS_Store
-
-# Windows
 Thumbs.db
-
-# IDE (JetBrains, VSCode, etc.)
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# ---------------------------------
-# File di Ambiente
-# ---------------------------------
-
-# File che contengono "segreti" come password o chiavi API
-# (Anche se non li usiamo ancora, è buona norma)
+# --------------------------------------------------
+# File di Ambiente e segreti
+# --------------------------------------------------
 .env
 .env.*
 !.env.example
-
-# ---------------------------------
-# Manuali LaTeX (output e build temporanei)
-manuali/**/build/
