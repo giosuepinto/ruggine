@@ -76,6 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // ================== Task logging CPU (requisito di progetto) ==================
+    // TODO: DA MIGLIORARE
     // Avvia un task asincrono che logga l'utilizzo della CPU ogni 2 minuti
     tokio::spawn(async move {
         // Configura sysinfo per leggere solo la CPU (ottimizzazione risorse)
