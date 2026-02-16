@@ -22,14 +22,14 @@ function ReceivedInvitesColumn({ receivedList, respondToInvite }) {
                     <div className="received-list">
                         {receivedList.map(inv => (
                             <div key={inv.id} className="invite-card received">
-                                <div><strong>Da:</strong> {inv.from_user}</div>
+                                <div><strong>Da:</strong> {inv.partner_username}</div>
                                 <div><strong>Gruppo:</strong> {inv.group_name}</div>
                                 <div><strong>Stato:</strong> {inv.status === 'pending' ? 'In attesa' : inv.status === 'accepted' ? 'Accettato' : 'Rifiutato'}</div>
                                 <div style={{ fontSize: '0.8rem', color: '#888' }}>{inv.sent_at}</div>
                                 {inv.status === 'pending' && (
                                     <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
-                                        <button className="mini-btn accept" onClick={() => respondToInvite(inv.id, 'accepted')}>Accetta</button>
-                                        <button className="mini-btn reject" onClick={() => respondToInvite(inv.id, 'rejected')}>Rifiuta</button>
+                                        <button className="mini-btn accept" onClick={() => respondToInvite(inv.id, true)}>Accetta</button>
+                                        <button className="mini-btn reject" onClick={() => respondToInvite(inv.id, false)}>Rifiuta</button>
                                     </div>
                                 )}
                             </div>

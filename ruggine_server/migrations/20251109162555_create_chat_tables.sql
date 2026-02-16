@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS messages (
     sender_user_id INTEGER NOT NULL,
     content TEXT NOT NULL,
     -- Salva il timestamp di quando il server ha ricevuto il messaggio
-    created_at DATETIME DEFAULT (datetime('now')),
+    created_at DATETIME DEFAULT (datetime('now','localtime')),
 
     FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
     FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE CASCADE

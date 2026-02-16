@@ -22,7 +22,7 @@ function SentInvitesColumn({ sentList }) {
                     <div className="sent-list">
                         {sentList.map(inv => (
                             <div key={inv.id} className="invite-card sent">
-                                <div><strong>A:</strong> {inv.to_user}</div>
+                                <div><strong>A:</strong> {inv.partner_username}</div>
                                 <div><strong>Gruppo:</strong> {inv.group_name}</div>
                                 <div><strong>Stato:</strong> {inv.status === 'pending' ? 'In attesa' : inv.status === 'rejected' ? 'Rifiutato' : inv.status}</div>
                                 <div style={{ fontSize: '0.8rem', color: '#888' }}>{inv.sent_at}</div>

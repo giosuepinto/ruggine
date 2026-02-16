@@ -135,7 +135,9 @@ pub async fn find_sent_invites(
         JOIN users u ON i.to_user_id = u.id
         JOIN groups g ON i.group_id = g.id
         WHERE i.from_user_id = ?
-          AND (i.status = 'pending' OR i.status = 'rejected')
+          AND (i.status = 'pending' OR
+               (i.status = 'rejected' AND i.updated_at > datetime('now','localtime','-2 minutes'))
+              )
         ORDER BY i.created_at DESC
         "#
     )
@@ -200,7 +202,7 @@ pub async fn is_in_cooldown_dm(
             (i.from_user_id = ? AND i.to_user_id = ?) OR
             (i.from_user_id = ? AND i.to_user_id = ?)
           )
-          AND i.updated_at > datetime('now', '-2 minutes')
+          AND i.updated_at > datetime('now','localtime','-2 minutes')
         "#
     )
         .bind(user_a).bind(user_b)
@@ -227,7 +229,7 @@ pub async fn check_group_invitation_status(
     if pending.0 > 0 { return Ok("pending".to_string()); }
 
     let cooldown: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM invitations WHERE from_user_id = ? AND to_user_id = ? AND group_id = ? AND status = 'rejected' AND updated_at > datetime('now', '-2 minutes')"
+        "SELECT COUNT(*) FROM invitations WHERE from_user_id = ? AND to_user_id = ? AND group_id = ? AND status = 'rejected' AND updated_at > datetime('now','localtime','-2 minutes')"
     )
         .bind(from_user).bind(to_user).bind(group_id)
         .fetch_one(db).await?;
