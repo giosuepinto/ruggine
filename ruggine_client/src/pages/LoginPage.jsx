@@ -20,10 +20,6 @@ import '../App.css';
 import LoginForm from '../components/LoginForm';
 import LoginMessage from '../components/LoginMessage';
 
-
-
-
-
 // Componente pagina login
 function LoginPage() {
     const { login } = useWebSocket();
@@ -48,10 +44,9 @@ function LoginPage() {
             const data = await response.json();
             if (response.ok) {
                 if (isLoginMode) {
-                    sessionStorage.setItem('username', username);
-                    sessionStorage.setItem('token', data.message);
                     setMessage('Login effettuato!');
-                    window.location.href = '/chat';
+                    login(username, data.message);
+                    navigate('/chat');
                 } else {
                     setIsLoginMode(true);
                     setPassword('');

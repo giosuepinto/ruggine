@@ -17,9 +17,6 @@ import '../App.css';
 import SentInvitesColumn from '../components/SentInvitesColumn';
 import ReceivedInvitesColumn from '../components/ReceivedInvitesColumn';
 
-
-
-
 // Componente pagina inviti
 function InvitesPage() {
     const { invitations, respondToInvite } = useWebSocket();

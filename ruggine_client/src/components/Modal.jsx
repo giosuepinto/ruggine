@@ -25,7 +25,7 @@ function Modal({ isOpen, onClose, modalType, setModalType, modalInput, setModalI
                     placeholder={modalType === 'dm' ? "Username utente..." : "Nome del gruppo..."}
                     value={modalInput}
                     onChange={e => setModalInput(e.target.value)}
-                    onKeyPress={e => e.key === 'Enter' && handleCreateFromModal()}
+                    onKeyDown={e => e.key === 'Enter' && handleCreateFromModal()}
                 />
                 <button className="login-button" onClick={handleCreateFromModal}>
                     {modalType === 'dm' ? 'Invia Richiesta' : 'Crea Gruppo'}

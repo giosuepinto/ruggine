@@ -12,7 +12,7 @@ function InputArea({ input, setInput, handleSend }) {
             <input
                 className="message-input" placeholder="Scrivi un messaggio..."
                 value={input} onChange={e => setInput(e.target.value)}
-                onKeyPress={e => e.key === 'Enter' && handleSend()}
+                onKeyDown={e => e.key === 'Enter' && handleSend()}
             />
             <button className="send-btn" onClick={handleSend} disabled={!input.trim()}>➤</button>
         </div>
