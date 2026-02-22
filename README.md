@@ -1,5 +1,12 @@
 # Ruggine: App di Chat Testuale
 
+**Autori**:
+- Alessandro Annecchini
+- Riccardo Marconi
+- Francesco Palmisani
+- Giosuè Pinto
+
+
 ## 1. Introduzione
 
 Il progetto **Ruggine** è un'applicazione di messaggistica istantanea Client/Server sviluppata per il corso di Programmazione di Sistema.
@@ -7,30 +14,30 @@ L'obiettivo è fornire una piattaforma performante, scalabile e sicura per lo sc
 
 L'architettura si basa su un backend in **Rust** (focalizzato su sicurezza e concorrenza) e un frontend in **React** (per una user experience moderna).
 
----
+### Manuali e Documentazione
+All'interno della cartella `manuali/` sono disponibili i documenti di approfondimento:
+- **[Manuale del Progettista](manuali/Manuale_del_Progettista.pdf)**
+- **[Manuale Utente](manuali/Manuale_Utente.pdf)**
+
+### Presentazione
+Nella cartella `presentazione/` sono disponibili le slide illustrative del progetto:
+- **[Presentazione Ruggine (PDF)](presentazione/Presentazione%20Ruggine.pdf)**
+- **[Presentazione Ruggine (PPTX)](presentazione/Presentazione%20Ruggine.pptx)**
+
 
 ## 2. Architettura del Sistema
 
 Il sistema segue un'architettura a tre livelli (Three-Tier Architecture) con comunicazione ibrida HTTP/WebSocket.
-```text
-[ FRONTEND: React + Vite ]
-^      ^
-|      |
-(HTTP/REST) (WebSocket JSON)
-|      |
-v      v
-[ BACKEND: Rust + Axum ]
-|
-+--- [ Controllers ] (Gestione I/O e Routing)
-|         |
-|         v
-+--- [ Service Layer ] (Logica di Business: Auth, Inviti, Chat)
-|         |
-|         v
-+--- [ Repository Layer ] (Query SQL e Accesso Dati)
-|
-v
-[ DATABASE: SQLite ]
+```mermaid
+graph LR
+    U(("User Client<br/>(Browser/App)")) -->|Interazione UI| F["FRONTEND<br/>(React + Vite)"]
+    F -- "HTTP/REST" <--> B["BACKEND<br/>(Rust + Axum)"]
+    F -- "WebSocket JSON" <--> B
+    
+    B --> C["Controllers<br/>(Gestione I/O e Routing)"]
+    C --> S["Service Layer<br/>(Logica di Business: Auth, Inviti, Chat)"]
+    S --> R["Repository Layer<br/>(Query SQL e Accesso Dati)"]
+    R --> D[("DATABASE<br/>(SQLite)")]
 ```
 
 ### Tecnologie Utilizzate
@@ -48,66 +55,78 @@ v
 * **Stato:** React Context API (`WebSocketContext`)
 * **Navigazione:** React Router DOM
 
----
 
-## 3. Struttura del Progetto (Backend)
+## 3. Struttura del Progetto
 
-Il backend è stato rifattorizzato passando da un singolo file monolitico a una **Layered Architecture** modulare per garantire manutenibilità e separazione delle responsabilità.
+Il progetto è diviso in due macro-componenti principali: il **Backend** (`ruggine_server`) e il **Frontend** (`ruggine_client`).
 
-### File System
-* `src/main.rs`: Entry point. Configura il logging, la connessione al DB, avvia il task di monitoraggio CPU e il server HTTP.
-* `src/router.rs`: Definisce le rotte HTTP (`/login`, `/register`) e WebSocket (`/ws`).
-* `src/state.rs`: Gestisce lo stato condiviso in memoria (connessioni attive) thread-safe tramite `Arc<RwLock<...>>`.
-* `src/error.rs`: Gestione centralizzata degli errori con mapping su codici HTTP.
+### Backend (Rust)
 
-### Moduli Funzionali
-1.  **Controllers (`src/controllers/`)**: Gestiscono l'I/O. Ricevono le richieste (HTTP o messaggi WS), validano l'input basilare e chiamano i servizi. Non contengono logica di business.
-2.  **Services (`src/services/`)**: Contengono la logica di business pura (es. regole per gli inviti, hashing password, gestione cooldown).
-3.  **Repositories (`src/repositories/`)**: Eseguono le query SQL pure. Nessuna logica di business qui, solo accesso ai dati.
-4.  **DTOs (`src/DTOs/`)**: Definiscono le strutture dati JSON per la comunicazione Client-Server (es. `ClientMessage`, `ServerMessage`).
+Il backend usa una **Layered Architecture** modulare per garantire manutenibilità e separazione delle responsabilità.
 
----
+**File System (`src/`)**
+* `main.rs`: Entry point. Configura il logging, la connessione al DB, avvia il task di monitoraggio CPU e il server HTTP.
+* `router.rs`: Definisce le rotte HTTP (`/login`, `/register`) e WebSocket (`/ws`).
+* `state.rs`: Gestisce lo stato condiviso in memoria (connessioni attive) thread-safe tramite `Arc<RwLock<...>>`.
+* `error.rs`: Gestione centralizzata degli errori con mapping su codici HTTP.
 
-## 4. Scelte Implementative e Funzionalità Chiave
+**Moduli Funzionali (`src/`)**
+1. **Controllers (`controllers/`)**: Gestiscono l'I/O. Ricevono le richieste (HTTP o WS), validano l'input basilare e chiamano i servizi.
+2. **Services (`services/`)**: Contengono la logica di business pura (es. regole inviti, hashing password, cooldown).
+3. **Repositories (`repositories/`)**: Eseguono le query SQL pure. Nessuna logica di business qui, solo accesso dati.
+4. **DTOs (`DTOs/`)**: Definiscono le strutture dati JSON per la comunicazione Client-Server.
 
-### 4.1 Gestione Connessioni e Multi-Device
-Il server supporta connessioni multiple per lo stesso utente (es. PC e Telefono contemporaneamente).
-* **Struttura:** `HashMap<UserId, HashMap<SocketUUID, Sender>>`.
-* Ogni tab/dispositivo ha un UUID univoco. Quando un utente si disconnette, viene rimosso solo quel socket specifico, mantenendo attive le altre sessioni.
+### Frontend (React)
 
-### 4.2 Protocollo di Comunicazione
-La comunicazione avviene tramite messaggi JSON tipizzati.
-* **Client -> Server:** `Auth`, `CreateGroup`, `InviteToGroup`, `HandleInvitation`, `SendGroupMessage`.
-* **Server -> Client:** `UpdateGroupList` (include cronologia), `UpdateInvitationsList`, `GroupChat`, `Error`.
+Il client è una Single Page Application (SPA) modulare strutturata in componenti funzionali per favorirne la riusabilità.
 
-### 4.3 Sistema di Inviti e Cooldown (Logica Avanzata)
-Per evitare spam e gestire la privacy, la creazione di chat non è immediata (eccetto per i propri gruppi).
-1.  **Invio:** Un utente invia una richiesta (`InviteToGroup` o `CreateDM`).
-2.  **Pending:** L'invito viene salvato nel DB con stato `pending`.
-3.  **Notifica:** Il destinatario vede l'invito in tempo reale nella pagina dedicata.
-4.  **Decisione:**
-    * **Accetta:** L'utente viene aggiunto al gruppo e la chat appare nella lista.
-    * **Rifiuta:** L'invito passa a `rejected`.
-5.  **Cooldown:** Se un invito viene rifiutato, il sistema impedisce nuovi inviti tra le stesse parti per **2 minuti**. Il controllo viene effettuato lato server confrontando il timestamp `updated_at` del rifiuto.
+**Struttura delle Cartelle (`src/`)**
+1. **Components (`components/`)**: Contiene i componenti UI riutilizzabili e indipendenti (es. le singole finestre di chat, la navbar, i form di login).
+2. **Pages (`pages/`)**: Rappresentano le viste principali assegnate alle singole rotte dell'applicativo (es. la pagina Home, la pagina degli Inviti).
+3. **Context (`context/`)**: Gestisce lo stato globale e persistente dell'applicazione utilizzando le Context API di React (es. `WebSocketContext` per mantenere e gestire la connessione col server ovunque).
+4. **Assets (`assets/`)**: Contiene risorse statiche come immagini, icone e file CSS globali.
 
-### 4.4 Sicurezza
-* **Autenticazione:** Utilizzo di **JWT (JSON Web Token)** firmati dal server. Il frontend non salva mai la password, ma solo il token.
-* **WebSocket Auth:** La prima azione del socket è l'invio del token JWT per l'identificazione.
-* **Validazione:** Controlli server-side su lunghezza password, username vuoti e tentativi di impersonificazione.
-* **Password Hashing:** Utilizzo dell'algoritmo **Argon2** con salt casuale per ogni utente.
 
-### 4.5 Persistenza e Cronologia
-* Tutti i dati (Utenti, Gruppi, Membri, Inviti, Messaggi) sono persistiti su **SQLite**.
-* Al login, il server recupera automaticamente gli ultimi 50 messaggi per ogni chat e li invia al client, garantendo la continuità della conversazione anche dopo un refresh della pagina.
+## 4. Funzionalità Chiave
 
-### 4.6 Monitoraggio Risorse
-Come da requisito, il server avvia un task asincrono (`tokio::spawn`) che utilizza la libreria `sysinfo` per campionare l'utilizzo della CPU ogni **2 minuti** e scriverlo nel file `server_cpu_stats.log`.
+### Gestione Connessioni e Multi-Device
+Il sistema supporta connessioni multiple per lo stesso utente (es. PC e Telefono contemporaneamente).
+* **Lato Server:** La struttura in memoria `HashMap<UserId, HashMap<SocketUUID, Sender>>` tiene traccia di ogni tab/dispositivo con un UUID univoco, rimuovendo le singole connessioni senza disconnettere altre sessioni aperte dallo stesso utente.
+* **Lato Client (React):** L'applicazione sfrutta la Context API di React (`WebSocketContext`) per erogare una singola connessione WebSocket universale a tutti i componenti della pagina e mantenendo la UI costantemente sincronizzata.
 
----
+### Protocollo di Comunicazione
+La comunicazione tra i livelli sfrutta il passaggio di messaggi JSON fortemente tipizzati garantiti dalle istruzioni di Rust.
+* **Client -> Server:** Azioni come log-in (`Auth`), creazione di gruppi (`CreateGroup`), o l'invio di messaggi (`SendGroupMessage`).
+* **Server -> Client:** Pushing in tempo reale degli eventi quali `GroupChat`, aggiornamento live degli inviti in arrivo (`UpdateInvitationsList`) o della messaggistica unificata.
 
-## 5. Manuale Utente (Frontend)
+### Sistema di Inviti e Cooldown (Logica Avanzata)
+Per evitare spam e gestire la privacy, le nuove interazioni richiedono un'accettazione diretta:
+1.  **Invito e Notifica (UI Reattiva):** Non appena una richiesta di connessione viene inviata da un utente e posta `pending` nel DB, l'applicazione destinataria React rileva il push dal server e aggiorna automaticamente la sezione dedicata senza bisogno di alcun ricaricamento (Soft Refresh).
+2.  **Approvazione/Rifiuto:** L'azione sui bottoni da parte dell'utente aggiorna immediatamente lo stato locale per nascondere o approvare la riga e invia via socket l'handle.
+3.  **Cooldown Server-Side:** Rifiutando un invito, il server introduce e verifica temporalmente lo scarto di **2 minuti**, prevenendo lo spam tra i due account via query string.
 
-### Installazione e Avvio
+### Sicurezza e Validazione Form
+* **Autenticazione JWT:** L'applicazione è priva di sessioni, e per lo scambio sfrutta token **JWT** firmati. Il front-end non salva mai in cache la password in chiaro, avvalendosi unicamente del token. 
+* **WebSocket Auth:** Un client deve manifestare il proprio token subito dopo l'apertura fisica del socket, a prevenzione delle connessioni impiegate ad impersonare altre entità.
+* **Password Hashing:** Le credenziali, prima di essere iscritte o lette nel DB, sono derivate utilizzando il moderno schema **Argon2** assieme all'uso dei *salt*.
+* **Feedback Istantaneo:** L'applicazione React implementa vincoli espliciti sui campi di Login/Reg intercettando preliminarmente richieste malformate per avvertire fluidamente l'utente.
+
+### Persistenza, Cronologia e Risorse
+* **Database Relazionale:** SQLite salva agilmente e persistemente Utenti, Gruppi, Relazioni, Inviti e Messaggi testuali.
+* **Ripresa in Tempo Reale:** Al momento del login, il server invia i retroscena della conversazione in cache (ultimi 50 messaggi) che vengono tempestivamente renderizzati a schermo da React e distribuiti assieme al context globale.
+
+### Monitoraggio CPU
+Il server avvia un task asincrono (`tokio::spawn`) che utilizza la libreria `sysinfo` per campionare e scrivere nei registri integrati il carico della macchina ogni **2 minuti**.
+
+
+## 5. Installazione e Guida all'Uso
+
+### Prerequisiti
+Per eseguire il progetto in locale, assicurati di avere installato:
+* **Rust & Cargo** (per l'ambiente backend)
+* **Node.js & npm** (per l'ambiente frontend)
+
+### Avvio
 1.  **Backend:**
     ```bash
     cd ruggine_server
@@ -133,16 +152,5 @@ Come da requisito, il server avvia un task asincrono (`tokio::spawn`) che utiliz
     * Visualizzare richieste inviate (con stato Pending/Rejected) e ricevute.
     * Accettare o Rifiutare le richieste in arrivo.
 
----
-
-## 6. Dati Tecnici TODO!
-
-* **Dimensione Eseguibile (Release):** [INSERIRE QUI LA DIMENSIONE] (su architettura macOS/Linux a 64bit).
-* **Utilizzo CPU average:** TODO
-* **Database:** Singolo file `ruggine.db` portabile.
-
----
-
-## 7. Conclusioni
-
-Il progetto soddisfa tutti i requisiti funzionali e non funzionali della traccia. L'adozione di Rust ha garantito prestazioni elevate e memory safety, mentre l'architettura a micro-componenti di React ha permesso di creare un'interfaccia utente reattiva e complessa (gestione stati inviti/chat in tempo reale).
+### Anteprima dell'Applicazione (Chat Page)
+![Homepage Ruggine](assets/main_page.png)
