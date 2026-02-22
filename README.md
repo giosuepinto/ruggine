@@ -29,7 +29,7 @@ Nella cartella `presentazione/` sono disponibili le slide illustrative del proge
 
 Il sistema segue un'architettura a tre livelli (Three-Tier Architecture) con comunicazione ibrida HTTP/WebSocket.
 ```mermaid
-graph LR
+graph TD
     U(("User Client<br/>(Browser/App)")) -->|Interazione UI| F["FRONTEND<br/>(React + Vite)"]
     F -- "HTTP/REST" <--> B["BACKEND<br/>(Rust + Axum)"]
     F -- "WebSocket JSON" <--> B
